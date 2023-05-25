@@ -7,11 +7,6 @@ namespace Assets.Scripts.Generation
     {
         Transform root;
 
-        private void Start()
-        {
-
-        }
-
         private void Update()
         {
             if (Input.GetKeyDown(KeyCode.E))

@@ -20,9 +20,9 @@
             // Terrifying equations for circumcircle 
             float diameter = (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y)) * 2;
 
-            float aSquare = MathUtils.SquareDistance(Vertex.zero, a);
-            float bSquare = MathUtils.SquareDistance(Vertex.zero, b);
-            float cSquare = MathUtils.SquareDistance(Vertex.zero, c);
+            float aSquare = Math.SquareDistance(Vertex.zero, a);
+            float bSquare = Math.SquareDistance(Vertex.zero, b);
+            float cSquare = Math.SquareDistance(Vertex.zero, c);
 
             float circleX = (aSquare * (b.y - c.y) + bSquare * (c.y - a.y) + cSquare * (a.y - b.y)) / diameter;
 
@@ -31,17 +31,17 @@
 
             // Check if vertex is inside circumcircle
             Vertex circleCenter = new Vertex(circleX, circleY);
-            float circleRadius = MathUtils.SquareDistance(a, circleCenter);
-            float vertexDistance = MathUtils.SquareDistance(vertex, circleCenter);
+            float circleRadius = Math.SquareDistance(a, circleCenter);
+            float vertexDistance = Math.SquareDistance(vertex, circleCenter);
 
             return vertexDistance <= circleRadius;
         }
 
         public bool ContainsVertex(Vertex vertex)
         {
-            return MathUtils.Distance(vertex, a) < 0.01f
-                || MathUtils.Distance(vertex, b) < 0.01f
-                || MathUtils.Distance(vertex, c) < 0.01f;
+            return Math.Distance(vertex, a) < 0.01f
+                || Math.Distance(vertex, b) < 0.01f
+                || Math.Distance(vertex, c) < 0.01f;
         }
     }
 }

@@ -18,8 +18,8 @@ namespace Assets.Scripts.Generation
 
         public static bool AlmostEqual(Edge left, Edge right)
         {
-            return MathUtils.Approximately(left.u, right.u) && MathUtils.Approximately(left.v, right.v)
-                || MathUtils.Approximately(left.u, right.v) && MathUtils.Approximately(left.v, right.u);
+            return Math.Approximately(left.u, right.u) && Math.Approximately(left.v, right.v)
+                || Math.Approximately(left.u, right.v) && Math.Approximately(left.v, right.u);
         }
     }
 
@@ -29,12 +29,12 @@ namespace Assets.Scripts.Generation
 
         public MeasuredEdge(Edge edge) : base(edge.u, edge.v)
         {
-            length = MathUtils.Distance(u, v);
+            length = Math.Distance(u, v);
         }
 
         public MeasuredEdge(Vertex u, Vertex v) : base(u, v)
         {
-            length = MathUtils.Distance(u, v);
+            length = Math.Distance(u, v);
         }
     }
 }

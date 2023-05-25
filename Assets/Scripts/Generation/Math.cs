@@ -2,7 +2,7 @@
 
 namespace Assets.Scripts.Generation
 {
-    public class MathUtils
+    public class Math
     {
         public static float Distance(Vertex v1, Vertex v2)
         {

@@ -5,9 +5,6 @@ namespace Assets.Scripts.Generation
 {
     public class DungeonDebug
     {
-
-        static CoroutineHelper helper;
-
         public static void DrawTriangle(object triangle, float time, Color color)
         {
             if (triangle.GetType() != typeof(Triangle))
@@ -18,18 +15,6 @@ namespace Assets.Scripts.Generation
             Debug.DrawLine(new Vector3(tmpTriangle.a.x, 0, tmpTriangle.a.y), new Vector3(tmpTriangle.b.x, 0, tmpTriangle.b.y), color, time);
             Debug.DrawLine(new Vector3(tmpTriangle.b.x, 0, tmpTriangle.b.y), new Vector3(tmpTriangle.c.x, 0, tmpTriangle.c.y), color, time);
             Debug.DrawLine(new Vector3(tmpTriangle.c.x, 0, tmpTriangle.c.y), new Vector3(tmpTriangle.a.x, 0, tmpTriangle.a.y), color, time);
-        }
-
-        public static void DelayDrawTriangle(object triangle, float drawTime, Color color, float delaySeconds)
-        {
-            if (helper == null)
-            {
-                GameObject go = new GameObject();
-                helper = go.AddComponent<CoroutineHelper>();
-            }
-
-            IEnumerator co = helper.DelayDrawTriangle(triangle, drawTime, color, delaySeconds);
-            helper.StartCoroutine(co);
         }
 
         public static void DrawEdge(object edge, float time, Color color)

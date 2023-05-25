@@ -31,16 +31,16 @@ namespace Assets.Scripts.Generation
         List<Node> open;
         HashSet<Node> closed;
 
-        public void InitializeGrid(bool[,] tiles, int width, int height)
+        public DungeonPathfinder(bool[,] tiles, int gridWidth, int gridHeight)
         {
-            gridWidth = width;
-            gridHeight = height;
+            this.gridWidth = gridWidth;
+            this.gridHeight = gridHeight;
 
-            grid = new Node[width, height];
+            grid = new Node[gridWidth, gridHeight];
 
-            for (int x = 0; x < width; x++)
+            for (int x = 0; x < gridWidth; x++)
             {
-                for (int y = 0; y < height; y++)
+                for (int y = 0; y < gridHeight; y++)
                 {
                     grid[x, y] = new Node(new Vertex(x, y), true);
                 }
@@ -63,7 +63,7 @@ namespace Assets.Scripts.Generation
 
                 for (int i = 1; i < open.Count; i++)
                 {
-                    if (open[i].fCost < node.fCost || MathUtils.Approximately(open[i].fCost, node.fCost))
+                    if (open[i].fCost < node.fCost || Math.Approximately(open[i].fCost, node.fCost))
                     {
                         if (open[i].hCost < node.hCost)
                         {
@@ -87,12 +87,12 @@ namespace Assets.Scripts.Generation
                         continue;
                     }
 
-                    float cost = node.gCost + MathUtils.Distance(node.position, neighbor.position);
+                    float cost = node.gCost + Math.Distance(node.position, neighbor.position);
 
                     if (cost < neighbor.gCost || !open.Contains(neighbor))
                     {
                         neighbor.gCost = cost;
-                        neighbor.hCost = MathUtils.Distance(neighbor.position, endNode.position);
+                        neighbor.hCost = Math.Distance(neighbor.position, endNode.position);
                         neighbor.parent = node;
 
                         if (!open.Contains(neighbor))
@@ -106,7 +106,7 @@ namespace Assets.Scripts.Generation
             return null;
         }
 
-        List<Vertex> RetracePath(Node startNode, Node endNode)
+        private List<Vertex> RetracePath(Node startNode, Node endNode)
         {
             List<Vertex> path = new List<Vertex>();
             Node current = endNode;
@@ -122,7 +122,7 @@ namespace Assets.Scripts.Generation
             return path;
         }
 
-        List<Node> GetNeighborNodes(Node node)
+        private List<Node> GetNeighborNodes(Node node)
         {
             List<Node> neighbors = new List<Node>();
 

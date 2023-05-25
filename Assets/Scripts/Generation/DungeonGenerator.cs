@@ -151,8 +151,7 @@ public class DungeonGenerator
 
     private void PathfindHallways()
     {
-        DungeonPathfinder pathfinder = new DungeonPathfinder();
-        pathfinder.InitializeGrid(grid, gridWidth, gridHeight);
+        DungeonPathfinder pathfinder = new DungeonPathfinder(grid, gridWidth, gridHeight);
 
         List<Vertex> currentHallway;
 
