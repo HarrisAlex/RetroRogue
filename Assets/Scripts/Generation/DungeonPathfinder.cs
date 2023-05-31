@@ -25,11 +25,12 @@ namespace Assets.Scripts.Generation
             }
         }
 
-        Node[,] grid;
-        int gridWidth;
-        int gridHeight;
-        List<Node> open;
-        HashSet<Node> closed;
+        private Node[,] grid;
+        private int gridWidth;
+        private int gridHeight;
+
+        private HashSet<Node> closed;
+        private List<Node> open;
 
         public DungeonPathfinder(bool[,] tiles, int gridWidth, int gridHeight)
         {

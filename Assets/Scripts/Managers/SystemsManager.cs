@@ -84,7 +84,7 @@ class SystemsData
     {
         typeof(IElectrifiable),
         typeof (IFlammable),
-        typeof(IHealthbar),
+        typeof(IDamagable),
         typeof(IInteractable),
         typeof(ILock)
     };

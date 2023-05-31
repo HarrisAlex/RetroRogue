@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 11dc3bfce950a6847804355972c88b15, type: 3}
+  m_Name: Default Generation Settings
+  m_EditorClassIdentifier: 
+  roomCount: 20
+  gridWidth: 128
+  gridHeight: 128
+  maxRoomWidth: 25
+  maxRoomHeight: 25
+  minRoomWidth: 7
+  minRoomHeight: 7
+  maxRoomAttempts: 5
+  extraHallwayGenerationChance: 0
+  floorMaterial: {fileID: 2100000, guid: c06c2ce82be9f1d44abf50a55ed09bf4, type: 2}
+  ceilingMaterial: {fileID: 2100000, guid: ba754d077c89ec94bbfa0106a4db17da, type: 2}
+  wallMaterial: {fileID: 0}
