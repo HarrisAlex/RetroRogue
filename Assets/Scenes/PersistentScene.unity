@@ -202,6 +202,7 @@ GameObject:
   - component: {fileID: 838776636}
   - component: {fileID: 838776637}
   - component: {fileID: 838776638}
+  - component: {fileID: 838776639}
   m_Layer: 0
   m_Name: Managers
   m_TagString: Untagged
@@ -250,6 +251,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   dungeonSettings: {fileID: 11400000, guid: 662e1633aa8b07f4fbcdbadae2790f17, type: 2}
   playerPrefab: {fileID: 2755955402563891663, guid: 9e456c5da703271479a300331b0118d1, type: 3}
+--- !u!114 &838776639
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 838776635}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8afa15b5bc9474748acd52be8bf24329, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lightCheckFrequency: 20
 --- !u!1 &1069203003
 GameObject:
   m_ObjectHideFlags: 0

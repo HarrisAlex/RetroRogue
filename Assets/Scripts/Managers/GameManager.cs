@@ -28,6 +28,8 @@ public class GameManager : MonoBehaviour
         // Spawn Player
         player = Instantiate(playerPrefab, playerSpawnPosition, Quaternion.identity, null).transform;
 
+        LightManager.Initialize();
+
         StartCoroutine(CalculateOcclusion());
     }
 
