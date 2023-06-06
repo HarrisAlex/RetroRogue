@@ -1,17 +1,15 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using System.Linq;
 
 public class LightManager : MonoBehaviour
 {
     private static Transform player;
-    private static List<LightInfo> lights;
+    private static List<LightInfo> lights = new List<LightInfo>();
     private static LightManager instance;
 
     [SerializeField] private float lightCheckFrequency = 3;
 
-    private struct LightInfo
+    public struct LightInfo
     {
         public Light light;
         public float distance;
@@ -34,68 +32,40 @@ public class LightManager : MonoBehaviour
     public static void Initialize()
     {
         player = GameManager.player;
-
-        lights = new List<LightInfo>();
-        Light[] allLights = FindObjectsOfType<Light>();
-
-        for (int i = 0; i < allLights.Length; i++)
-        {
-            LightInfo tmp;
-            tmp.light = allLights[i];
-            tmp.distance = (allLights[i].transform.position - player.position).sqrMagnitude;
-
-            lights.Add(tmp);
-        }
-
-        lights.Sort((a, b) => a.distance.CompareTo(b.distance));
     }
 
     private void Update()
     {
         if (lights == null) return;
 
-        if (lights.Count > 8)
+        if (lights.Count < 9) return;
+
+        OrderLights();
+
+        for (int i = 0; i < lights.Count; i++)
         {
-            LightInfo tmp;
-            for (int i = 0; i < lights.Count; i++)
-            {
-                tmp.light = lights[i].light;
-                tmp.distance = (lights[i].light.transform.position - player.position).sqrMagnitude;
-
-                lights[i] = tmp;
-            }
-
-            lights.Sort((a, b) => a.distance.CompareTo(b.distance));
-
-            for (int i = 0; i < lights.Count; i++)
-            {
-                lights[i].light.enabled = i < 8;
-            }
+            lights[i].light.enabled = i < 8;
         }
     }
 
     public static void AddLight(Light light)
     {
-        if (HasLight(light))
-        {
-            return;
-        }
+        if (HasLight(light)) return;
 
         LightInfo tmp;
         tmp.light = light;
-        tmp.distance = (light.transform.position - player.position).sqrMagnitude;
+        tmp.distance = -1;
 
         lights.Add(tmp);
     }
 
     public static void RemoveLight(Light light)
     {
-        if (!HasLight(light))
+        LightInfo lightInfo;
+        if (GetLight(light, out lightInfo))
         {
-            return;
+            lights.Remove(lightInfo);
         }
-
-        //TODO remove light
     }
 
     public static bool HasLight(Light light)
@@ -109,5 +79,38 @@ public class LightManager : MonoBehaviour
         }
 
         return false;
+    }
+
+    public static bool GetLight(Light light, out LightInfo lightInfo)
+    {
+        lightInfo.light = null;
+        lightInfo.distance = -1;
+
+        if (!HasLight(light)) return false;
+
+        for (int i = 0; i < lights.Count; i++)
+        {
+            if (lights[i].light == light)
+            {
+                lightInfo = lights[i];
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static void OrderLights()
+    {
+        LightInfo tmp;
+        for (int i = 0; i < lights.Count; i++)
+        {
+            tmp.light = lights[i].light;
+            tmp.distance = (lights[i].light.transform.position - player.position).sqrMagnitude;
+
+            lights[i] = tmp;
+        }
+
+        lights.Sort((a, b) => a.distance.CompareTo(b.distance));
     }
 }

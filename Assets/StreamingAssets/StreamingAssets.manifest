@@ -1,0 +1,7 @@
+ManifestFileVersion: 0
+CRC: 1642137400
+AssetBundleManifest:
+  AssetBundleInfos:
+    Info_0:
+      Name: footsteps
+      Dependencies: {}

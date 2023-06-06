@@ -15,17 +15,10 @@ namespace Assets.Scripts.Generation
             public Vector2[] uvs;
         }
 
-        public static Vector3 RenderDungeon(GenerationSettings settings, out Dictionary<Room, List<Light>> rooms)
+        public static Vector3 RenderDungeon(GenerationSettings settings)
         {
-            rooms = new Dictionary<Room, List<Light>>();
-
             DungeonGenerator dungeonGenerator = new DungeonGenerator(settings);
-
             bool[,] grid = dungeonGenerator.Generate((int)System.DateTime.Now.Ticks);
-            foreach (Room room in dungeonGenerator.rooms)
-            {
-                rooms.Add(room, new List<Light>());
-            }
 
             for (int x = 0; x < settings.gridWidth; x++)
             {
@@ -40,17 +33,20 @@ namespace Assets.Scripts.Generation
 
             Transform floor = GenerateMesh(CreatePlaneDescription(settings), settings.floorMaterial);
             floor.localScale = new Vector3(1, -1, 1);
+            floor.gameObject.AddComponent<BoxCollider>();
 
             Transform ceiling = GenerateMesh(CreatePlaneDescription(settings), settings.ceilingMaterial);
             ceiling.position = new Vector3(0, 3, 0);
 
+            Light lightComponent;
             foreach (Room room in dungeonGenerator.rooms)
             {
                 Color color = Random.ColorHSV();
+
                 foreach (Vertex light in room.lights)
                 {
-                    rooms[room].Add(CreateLight((int)light.x, (int)light.y));
-                    //rooms[room][rooms[room].Count - 1].color = color;
+                    lightComponent = CreateLight((int)light.x, (int)light.y);
+                    LightManager.AddLight(lightComponent);
                 }
             }
 
@@ -86,8 +82,6 @@ namespace Assets.Scripts.Generation
             description.vertices = new Vector3[((settings.gridWidth / 2) + 1) * ((settings.gridHeight / 2) + 1)];
             description.triangles = new int[(settings.gridWidth / 2) * (settings.gridHeight / 2) * 6];
             description.uvs = new Vector2[description.vertices.Length];
-
-            Vector4 tangent = new Vector4(1, 0, 0, -1);
 
             for (int x = 0, i = 0; x <= settings.gridWidth / 2; x++)
             {

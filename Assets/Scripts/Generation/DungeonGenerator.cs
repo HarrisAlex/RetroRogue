@@ -209,8 +209,6 @@ namespace Assets.Scripts.Generation
 
         private void AddLights()
         {
-            //lights = new List<Vertex>();
-
             foreach (Room room in rooms)
             {
                 room.lights = new List<Vertex>();
@@ -219,45 +217,6 @@ namespace Assets.Scripts.Generation
                 {
                     room.lights.Add(room.GetCenter());
                 }
-
-                //int roomArea = room.width * room.height;
-                //int numberOfLights = roomArea / 36;
-
-                //int roomPerimeter = (room.width * 2) + (room.height * 2);
-                //float delta = (float)roomPerimeter / numberOfLights;
-
-                //Vertex current = new Vertex(random.Next(room.xPosition, room.xPosition + room.width), room.yPosition);
-                //room.lights.Add(current);
-
-                //float distance = 0;
-
-                //for (int i = 1; i < numberOfLights; i++)
-                //{
-                //    distance = delta * i;
-
-                //    // Bottom edge
-                //    if (distance < room.width)
-                //    {
-                //        current = new Vertex(room.xPosition + distance, room.yPosition + 1);
-                //    }
-                //    // Right edge
-                //    else if (distance < room.width + room.height)
-                //    {
-                //        current = new Vertex(room.xPosition + room.width - 2, (distance - room.width) + room.yPosition);
-                //    }
-                //    // Top edge
-                //    else if (distance < (room.width * 2) + room.height)
-                //    {
-                //        current = new Vertex(room.xPosition + room.width - (distance - room.width - room.height), room.yPosition + room.height - 2);
-                //    }
-                //    // Left edge
-                //    else
-                //    {
-                //        current = new Vertex(room.xPosition + 1, (room.yPosition + room.height) - (distance - ((2 * room.width) + room.height)));
-                //    }
-
-                //    room.lights.Add(current);
-                //}
             }
         }
 
