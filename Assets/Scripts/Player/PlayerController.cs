@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using UnityEngine;
+﻿using UnityEngine;
 
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour, IDamagable
@@ -98,8 +97,6 @@ public class PlayerController : MonoBehaviour, IDamagable
         moveVelocity.y = 0;
         moveVelocity = transform.TransformDirection(moveVelocity);
         moveVelocity.y = tempY;
-
-        Debug.Log(isGrounded);
 
         // Apply movement
         controller.Move(moveVelocity);
