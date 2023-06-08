@@ -15,14 +15,13 @@ public class FootstepPlayer : MonoBehaviour
     [SerializeField] private FootstepTier walkTier;
     [SerializeField] private FootstepTier sprintTier;
     [SerializeField] private FootstepTier crouchTier;
-    [SerializeField] private float transitionTime = 1;
 
     // AssetBundle
     private static AssetBundle footstepBundle;
     private static AudioClip[] footstepSounds;
 
     // Component references
-    private PlayerController controller;
+    private MovementController controller;
     private AudioSource source;
 
     private Vector3 lastFootstepPosition;
@@ -31,7 +30,7 @@ public class FootstepPlayer : MonoBehaviour
     void Awake()
     {
         source = GetComponent<AudioSource>();
-        controller = GetComponent<PlayerController>();
+        controller = GetComponent<MovementController>();
 
         // Load Footstep AssetBundle
         footstepBundle = AssetBundle.LoadFromFile(Path.Combine(Application.streamingAssetsPath, "footsteps"));
@@ -40,15 +39,15 @@ public class FootstepPlayer : MonoBehaviour
 
     void Update()
     {
-        switch (controller.state)
+        switch (controller.State)
         {
-            case PlayerController.MovementState.Walking:
+            case MovementController.MovementState.Walking:
                 footstepTier = walkTier;
                 break;
-            case PlayerController.MovementState.Sprinting:
+            case MovementController.MovementState.Sprinting:
                 footstepTier = sprintTier;
                 break;
-            case PlayerController.MovementState.Crouching:
+            case MovementController.MovementState.Crouching:
                 footstepTier = crouchTier;
                 break;
         }

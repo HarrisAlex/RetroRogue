@@ -7,8 +7,6 @@ public class LightManager : MonoBehaviour
     private static List<LightInfo> lights = new List<LightInfo>();
     private static LightManager instance;
 
-    [SerializeField] private float lightCheckFrequency = 3;
-
     public struct LightInfo
     {
         public Light light;

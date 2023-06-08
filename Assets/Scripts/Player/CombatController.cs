@@ -4,13 +4,16 @@ using UnityEngine;
 
 public class CombatController : MonoBehaviour
 {
-    // Editor vars
+    // Editor variables
     [SerializeField] private RuntimeAnimatorController weaponController;
 
+    // Component references
     private Weapon currentWeapon;
     private Transform weaponHolder;
     private Animator animator;
+
     private float cooldownTimer = 0;
+    private RaycastHit attackHit;
 
     private int attackAnimHash;
     private int blockAnimHash;
@@ -30,22 +33,26 @@ public class CombatController : MonoBehaviour
 
     private void Update()
     {
-        if (!currentWeapon) return;
-
         if (cooldownTimer > 0)
             cooldownTimer -= Time.deltaTime;
+    }
 
-        if (Input.GetButtonDown("Attack"))
-        {
-            if (cooldownTimer > 0) return;
+    public void Attack()
+    {
+        if (cooldownTimer > 0) return;
 
-            animator.CrossFade(attackAnimHash, 0.3f);
-            cooldownTimer = currentWeapon.cooldownTime;
-        }
-        else if (Input.GetButtonDown("Block"))
+        animator.CrossFade(attackAnimHash, 0.3f);
+        cooldownTimer = currentWeapon.cooldownTime;
+
+        if (Physics.Raycast(transform.position, transform.forward, out attackHit))
         {
-            animator.CrossFade(blockAnimHash, 0.3f);
+
         }
+    }
+
+    public void Block()
+    {
+        animator.CrossFade(blockAnimHash, 0.3f);
     }
 
     public void SetWeapon(Weapon weapon)

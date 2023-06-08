@@ -122,6 +122,9 @@ GameObject:
   m_Component:
   - component: {fileID: 2755955402563891656}
   - component: {fileID: 2755955402563891657}
+  - component: {fileID: 2445704867374494181}
+  - component: {fileID: 9200476516330025601}
+  - component: {fileID: 3348873799818330859}
   - component: {fileID: 2755955402563891662}
   - component: {fileID: 3152693627286242837}
   - component: {fileID: 9112463688427103839}
@@ -168,6 +171,47 @@ CharacterController:
   m_SkinWidth: 0.01
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 1, z: 0}
+--- !u!114 &2445704867374494181
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2755955402563891663}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4636a6c777ebc3c4e8366327597ff4f4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &9200476516330025601
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2755955402563891663}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ce7bc470f3233e24499a23f1e42e9dea, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &3348873799818330859
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2755955402563891663}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ec5369aede690a743ac0fda5f397f469, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  walkSpeed: 2
+  springSpeed: 4.5
+  crouchSpeed: 1.5
+  jumpForce: 6
+  sprintTransition: 1
 --- !u!114 &2755955402563891662
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -180,14 +224,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 92633aed917e13a41808a5b02e8120eb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  walkSpeed: 2
-  springSpeed: 5
-  crouchSpeed: 0.7
-  sprintTransition: 3
   lookSensitivity: 5
   lookAngleMax: 85
   lookAngleMin: -70
-  jumpForce: 0
 --- !u!114 &3152693627286242837
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -200,6 +239,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ee2df337990120746bc09c55064c6df1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  weaponController: {fileID: 0}
 --- !u!114 &9112463688427103839
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -221,7 +261,6 @@ MonoBehaviour:
   crouchTier:
     distance: 0.75
     volume: 0.3
-  transitionTime: 1
 --- !u!82 &331680099179476298
 AudioSource:
   m_ObjectHideFlags: 0
