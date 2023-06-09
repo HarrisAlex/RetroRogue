@@ -8,11 +8,25 @@ public class MovementController : MonoBehaviour
     [SerializeField] private float springSpeed = 4.5f;
     [SerializeField] private float crouchSpeed = 1.5f;
     [SerializeField] private float jumpForce = 6;
-    [SerializeField] private float sprintTransition = 1;
 
     // Movement
     private float speed = 1;
-    private float targetSpeed = 1;
+    private float TargetSpeed
+    {
+        get
+        {
+            switch (State)
+            {
+                case MovementState.Sprinting:
+                    return springSpeed;
+                case MovementState.Crouching:
+                    return crouchSpeed;
+                default:
+                    return walkSpeed;
+            }
+        }
+    }
+    private const float sprintTransition = 4;
     private Vector3 velocity = Vector3.zero;
     private bool isGrounded;
 
@@ -38,17 +52,9 @@ public class MovementController : MonoBehaviour
 
     private void Update()
     {
-        // Cache result of IsGrounded()
-        isGrounded = IsGrounded();
+        speed = Mathf.Lerp(speed, TargetSpeed, Time.smoothDeltaTime * sprintTransition);
 
-        // Get and set speed based on state
-        CalculateSpeed();
-        speed = Mathf.Lerp(speed, targetSpeed, Time.smoothDeltaTime * sprintTransition);
-
-        if (isGrounded)
-            velocity.y = 0;
-        else
-            velocity.y -= 9.8f * Time.smoothDeltaTime;
+        ApplyGravity();
 
         LocalizeVelocity();
 
@@ -96,19 +102,15 @@ public class MovementController : MonoBehaviour
         velocity.y = tempY;
     }
 
-    private void CalculateSpeed()
+    // Apply gravity if player is not grounded
+    private void ApplyGravity()
     {
-        switch (State)
-        {
-            case MovementState.Walking:
-                targetSpeed = walkSpeed;
-                break;
-            case MovementState.Sprinting:
-                targetSpeed = springSpeed;
-                break;
-            case MovementState.Crouching:
-                targetSpeed = crouchSpeed;
-                break;
-        }
+        // Cache result of IsGrounded()
+        isGrounded = IsGrounded();
+
+        if (isGrounded)
+            velocity.y = 0;
+        else
+            velocity.y -= 9.8f * Time.smoothDeltaTime;
     }
 }

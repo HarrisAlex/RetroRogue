@@ -6,6 +6,7 @@ public class CombatController : MonoBehaviour
 {
     // Editor variables
     [SerializeField] private RuntimeAnimatorController weaponController;
+    [SerializeField] private string animatorBlockVariable;
 
     // Component references
     private Weapon currentWeapon;
@@ -16,19 +17,28 @@ public class CombatController : MonoBehaviour
     private RaycastHit attackHit;
 
     private int attackAnimHash;
-    private int blockAnimHash;
+    private int blockVarHash;
 
     private void Start()
     {
         // Create weapon holder and animator
         weaponHolder = new GameObject("Weapon Holder").transform;
         weaponHolder.parent = transform;
-        animator = weaponHolder.gameObject.AddComponent<Animator>();
-        animator.runtimeAnimatorController = weaponController;
 
-        // Get animation hashes
+        InitializeAnimator();
+    }
+
+    // Gets animator component and initializes settings
+    private void InitializeAnimator()
+    {
+        animator = weaponHolder.gameObject.AddComponent<Animator>();
+
+        // Get animation hashes and set animator variables
         attackAnimHash = Animator.StringToHash("Attack");
-        blockAnimHash = Animator.StringToHash("Block");
+        blockVarHash = Animator.StringToHash(animatorBlockVariable);
+
+        if (weaponController)
+            animator.runtimeAnimatorController = weaponController;
     }
 
     private void Update()
@@ -39,6 +49,7 @@ public class CombatController : MonoBehaviour
 
     public void Attack()
     {
+        if (!currentWeapon) return;
         if (cooldownTimer > 0) return;
 
         animator.CrossFade(attackAnimHash, 0.3f);
@@ -46,13 +57,21 @@ public class CombatController : MonoBehaviour
 
         if (Physics.Raycast(transform.position, transform.forward, out attackHit))
         {
+            IDamagable damageable;
 
+            if (attackHit.transform.TryGetComponent(out damageable))
+                damageable.Damage(currentWeapon.damage);
         }
     }
 
-    public void Block()
+    public void StartBlock()
     {
-        animator.CrossFade(blockAnimHash, 0.3f);
+        animator.SetBool(blockVarHash, true);
+    }
+
+    public void StopBlock()
+    {
+        animator.SetBool(blockVarHash, false);
     }
 
     public void SetWeapon(Weapon weapon)

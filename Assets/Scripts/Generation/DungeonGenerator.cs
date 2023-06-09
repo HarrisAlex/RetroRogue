@@ -4,12 +4,19 @@ using Random = System.Random;
 
 namespace Assets.Scripts.Generation
 {
+    public enum TileType
+    {
+        Void,
+        Floor,
+        Wall,
+    }
+
     public class DungeonGenerator
     {
         private Random random;
 
-        // Bool = isRoom
-        private bool[,] grid;
+        // bool = isRoom
+        private TileType[,] grid;
         public List<Room> rooms { get; private set; }
         private List<Edge> edges;
         private HashSet<MeasuredEdge> selectedEdges;
@@ -22,11 +29,11 @@ namespace Assets.Scripts.Generation
             this.settings = settings;
         }
 
-        public bool[,] Generate(int seed)
+        public TileType[,] Generate(int seed)
         {
             random = new Random(seed);
 
-            grid = new bool[settings.gridWidth, settings.gridHeight];
+            grid = new TileType[settings.gridWidth, settings.gridHeight];
             rooms = new List<Room>();
 
             InitializeGrid();
@@ -45,7 +52,7 @@ namespace Assets.Scripts.Generation
             {
                 for (int y = 0; y < settings.gridHeight; y++)
                 {
-                    grid[x, y] = false;
+                    grid[x, y] = TileType.Void;
                 }
             }
         }
@@ -100,14 +107,24 @@ namespace Assets.Scripts.Generation
                 {
                     rooms.Add(newRoom);
 
-                    // Mark grid squares that new room takes up as being Room
+                    // Mark grid squares that new room takes up
                     for (int x = newRoom.xPosition; x < newRoom.xPosition + newRoom.width; x++)
                     {
                         for (int y = newRoom.yPosition; y < newRoom.yPosition + newRoom.height; y++)
                         {
-                            grid[x, y] = true;
+                            if (x == newRoom.xPosition || x == newRoom.xPosition + newRoom.width
+                                || y == newRoom.yPosition || y == newRoom.yPosition + newRoom.height)
+                            {
+                                grid[x, y] = TileType.Wall;
+                            }
+                            else
+                            {
+                                grid[x, y] = TileType.Floor;
+                            }
                         }
                     }
+
+                    DungeonDebug.DrawRoom(newRoom, 500, UnityEngine.Color.red);
                 }
             }
         }
@@ -161,32 +178,7 @@ namespace Assets.Scripts.Generation
 
                 if (currentHallway != null)
                 {
-                    Room firstRoom = null;
-
-                    foreach (Room room in rooms)
-                    {
-                        if (room.ContainsPoint(edge.u))
-                        {
-                            firstRoom = room;
-                            break;
-                        }
-                    }
-
-                    firstRoom.connectedRooms = new List<Room>();
-
-                    if (firstRoom != null)
-                    {
-                        foreach (Room room in rooms)
-                        {
-                            if (room.ContainsPoint(edge.v))
-                            {
-                                if (room != firstRoom)
-                                {
-                                    firstRoom.connectedRooms.Add(room);
-                                }
-                            }
-                        }
-                    }
+                    DungeonDebug.DrawEdge(edge, 500, UnityEngine.Color.green);
 
                     int xIndex;
                     int yIndex;
@@ -199,7 +191,28 @@ namespace Assets.Scripts.Generation
                         {
                             for (int y = -2; y <= 2; y++)
                             {
-                                SetTile(xIndex + x, yIndex + y, true);
+                                if ((x == -2 || x == 2 || y == -2 || y == 2))
+                                {
+                                    if (x < settings.gridWidth && x > 0 && y < settings.gridHeight && y > 0)
+                                    {
+                                        if (grid[x, y] == TileType.Void)
+                                        {
+                                            SetTile(xIndex + x, yIndex + y, TileType.Wall);
+                                        }
+                                        else
+                                        {
+                                            SetTile(xIndex + x, yIndex + y, TileType.Floor);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        SetTile(xIndex + x, yIndex + y, TileType.Floor);
+                                    }
+                                }
+                                else
+                                {
+                                    SetTile(xIndex + x, yIndex + y, TileType.Floor);
+                                }
                             }
                         }
                     }
@@ -220,35 +233,14 @@ namespace Assets.Scripts.Generation
             }
         }
 
-        private void SetTile(int x, int y, bool isRoom)
+        private void SetTile(int x, int y, TileType tileType)
         {
             if (x < 0 || y < 0 || x > settings.gridWidth || y > settings.gridHeight)
             {
                 return;
             }
 
-            grid[x, y] = isRoom;
-        }
-
-        public bool IsWall(int xIndex, int yIndex)
-        {
-            if (!grid[xIndex, yIndex])
-            {
-                return false;
-            }
-
-            for (int x = -1; x <= 1; x++)
-            {
-                for (int y = -1; y <= 1; y++)
-                {
-                    if (!grid[xIndex + x, yIndex + y])
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
+            grid[x, y] = tileType;
         }
 
         public bool TryGetRandomRoomCenter(out Vertex center)
@@ -279,7 +271,6 @@ namespace Assets.Scripts.Generation
         public int height;
 
         public List<Vertex> lights;
-        public List<Room> connectedRooms;
 
         public Room() { }
 

@@ -18,15 +18,15 @@ namespace Assets.Scripts.Generation
         public static Vector3 RenderDungeon(GenerationSettings settings)
         {
             DungeonGenerator dungeonGenerator = new DungeonGenerator(settings);
-            bool[,] grid = dungeonGenerator.Generate((int)System.DateTime.Now.Ticks);
+            TileType[,] grid = dungeonGenerator.Generate((int)System.DateTime.Now.Ticks);
 
             for (int x = 0; x < settings.gridWidth; x++)
             {
                 for (int y = 0; y < settings.gridHeight; y++)
                 {
-                    if (dungeonGenerator.IsWall(x, y))
+                    if (grid[x, y] == TileType.Wall)
                     {
-                        CreateWall(x, y);
+                        CreateWall(x, y, 0);
                     }
                 }
             }
@@ -61,7 +61,7 @@ namespace Assets.Scripts.Generation
             }
         }
 
-        private static void CreateWall(int x, int y)
+        private static void CreateWall(int x, int y, float angle)
         {
             if (root == null)
             {
@@ -70,7 +70,8 @@ namespace Assets.Scripts.Generation
 
             Transform go = GameObject.CreatePrimitive(PrimitiveType.Cube).transform;
             go.position = new Vector3(x, 1.5f, y);
-            go.localScale = new Vector3(1, 3, 1);
+            go.localScale = new Vector3(1, 3, Mathf.Abs(angle) < 1 ? 1 : 1.415f);
+            go.eulerAngles = new Vector3(0, angle, 0);
             go.parent = root;
         }
 

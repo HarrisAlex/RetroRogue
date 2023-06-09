@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-public class MouseLook : MonoBehaviour
+public class LookController : MonoBehaviour
 {
     // Editor variables
     [SerializeField] private float lookSensitivity = 5;

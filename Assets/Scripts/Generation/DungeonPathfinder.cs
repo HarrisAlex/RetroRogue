@@ -32,7 +32,7 @@ namespace Assets.Scripts.Generation
         private HashSet<Node> closed;
         private List<Node> open;
 
-        public DungeonPathfinder(bool[,] tiles, int gridWidth, int gridHeight)
+        public DungeonPathfinder(TileType[,] tiles, int gridWidth, int gridHeight)
         {
             this.gridWidth = gridWidth;
             this.gridHeight = gridHeight;
