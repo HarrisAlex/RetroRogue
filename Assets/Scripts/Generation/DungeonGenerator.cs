@@ -108,9 +108,9 @@ namespace Assets.Scripts.Generation
                     rooms.Add(newRoom);
 
                     // Mark grid squares that new room takes up
-                    for (int x = newRoom.xPosition; x < newRoom.xPosition + newRoom.width; x++)
+                    for (int x = newRoom.xPosition; x <= newRoom.xPosition + newRoom.width; x++)
                     {
-                        for (int y = newRoom.yPosition; y < newRoom.yPosition + newRoom.height; y++)
+                        for (int y = newRoom.yPosition; y <= newRoom.yPosition + newRoom.height; y++)
                         {
                             if (x == newRoom.xPosition || x == newRoom.xPosition + newRoom.width
                                 || y == newRoom.yPosition || y == newRoom.yPosition + newRoom.height)
@@ -191,27 +191,18 @@ namespace Assets.Scripts.Generation
                         {
                             for (int y = -2; y <= 2; y++)
                             {
-                                if ((x == -2 || x == 2 || y == -2 || y == 2))
+                                if (WithinGrid(xIndex + x, yIndex + y))
                                 {
-                                    if (x < settings.gridWidth && x > 0 && y < settings.gridHeight && y > 0)
+                                    if (grid[xIndex + x, yIndex + y] != TileType.Void) continue;
+
+                                    if (GetNeighborCount(xIndex + x, yIndex + y) < 9)
                                     {
-                                        if (grid[x, y] == TileType.Void)
-                                        {
-                                            SetTile(xIndex + x, yIndex + y, TileType.Wall);
-                                        }
-                                        else
-                                        {
-                                            SetTile(xIndex + x, yIndex + y, TileType.Floor);
-                                        }
+                                        SetTile(xIndex + x, yIndex + y, TileType.Wall);
                                     }
                                     else
                                     {
-                                        SetTile(xIndex + x, yIndex + y, TileType.Floor);
+                                        SetTile(xIndex + x, yIndex + y, TileType.Wall);
                                     }
-                                }
-                                else
-                                {
-                                    SetTile(xIndex + x, yIndex + y, TileType.Floor);
                                 }
                             }
                         }
@@ -235,12 +226,33 @@ namespace Assets.Scripts.Generation
 
         private void SetTile(int x, int y, TileType tileType)
         {
-            if (x < 0 || y < 0 || x > settings.gridWidth || y > settings.gridHeight)
-            {
-                return;
-            }
+            if (!WithinGrid(x, y)) return;
 
             grid[x, y] = tileType;
+        }
+
+        private int GetNeighborCount(int x, int y)
+        {
+            if (!WithinGrid(x, y)) return 0;
+
+            int count = 0;
+            for (int xi = -2; xi <= 2; xi++)
+            {
+                for (int yi = -2; yi <= 2; yi++)
+                {
+                    if (grid[x + xi, y + yi] != TileType.Void)
+                    {
+                        count++;
+                    }
+                }
+            }
+
+            return count;
+        }
+
+        private bool WithinGrid(int x, int y)
+        {
+            return !(x < 0 || y < 0 || x > settings.gridWidth || y > settings.gridHeight);
         }
 
         public bool TryGetRandomRoomCenter(out Vertex center)
