@@ -4,6 +4,11 @@ namespace Assets.Scripts.Generation
 {
     public class Math
     {
+        public static float Distance(Coordinate c1, Coordinate c2)
+        {
+            return MathF.Sqrt(MathF.Pow(c1.x - c2.x, 2) + MathF.Pow(c1.y - c2.y, 2));
+        }
+
         public static float Distance(Vertex v1, Vertex v2)
         {
             return MathF.Sqrt(MathF.Pow(v1.x - v2.x, 2) + MathF.Pow(v1.y - v2.y, 2));

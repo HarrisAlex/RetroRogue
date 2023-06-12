@@ -7,7 +7,7 @@ namespace Assets.Scripts.Generation
     {
         class Node
         {
-            public Vertex position;
+            public Coordinate position;
             public Node parent;
             public float gCost;
             public float hCost;
@@ -18,7 +18,7 @@ namespace Assets.Scripts.Generation
                 get { return gCost + hCost; }
             }
 
-            public Node(Vertex position, bool traversable)
+            public Node(Coordinate position, bool traversable)
             {
                 this.position = position;
                 this.traversable = traversable;
@@ -39,7 +39,7 @@ namespace Assets.Scripts.Generation
                 {
                     for (int y = 0; y < height; y++)
                     {
-                        nodes[x, y] = new Node(new Vertex(x, y), true);
+                        nodes[x, y] = new Node(new Coordinate(x, y), true);
                     }
                 }
 
@@ -64,11 +64,6 @@ namespace Assets.Scripts.Generation
 
             public List<Node> GetNeighbors(Node node)
             {
-                int xCoord = FloatToInt(node.position.x);
-                int yCoord = FloatToInt(node.position.y);
-
-                if (!IsValidPosition(x, y)) return null;
-
                 List<Node> result = new();
 
                 int checkX, checkY;
@@ -81,22 +76,15 @@ namespace Assets.Scripts.Generation
                             continue;
                         }
 
-                        checkX = xCoord + xi;
-                        checkY = yCoord + yi;
+                        checkX = node.position.x + xi;
+                        checkY = node.position.y + yi;
 
                         if (IsValidPosition(checkX, checkY))
-                        {
-                            result.Add(GetNode(x, y));
-                        }
+                            result.Add(GetNode(checkX, checkY));
                     }
                 }
 
                 return result;
-            }
-
-            public List<Node> GetNeighbors(float x, float y)
-            {
-                
             }
 
             private int FloatToInt(float number)
@@ -129,7 +117,7 @@ namespace Assets.Scripts.Generation
         /// <param name="start">The starting position to calculate from.</param>
         /// <param name="end">The desintation of the path.</param>
         /// <returns></returns>
-        public static List<Vertex> FindPath(int gridWidth, int gridHeight, Vertex start, Vertex end)
+        public static List<Coordinate> FindPath(int gridWidth, int gridHeight, Vertex start, Vertex end)
         {
             Grid grid = new Grid(gridWidth, gridHeight);
 
@@ -196,9 +184,9 @@ namespace Assets.Scripts.Generation
         }
 
         // Trace path from start to finish through parents
-        private static List<Vertex> RetracePath(Node startNode, Node endNode)
+        private static List<Coordinate> RetracePath(Node startNode, Node endNode)
         {
-            List<Vertex> path = new List<Vertex>();
+            List<Coordinate> path = new List<Coordinate>();
             Node current = endNode;
 
             while (current != startNode)

@@ -168,24 +168,24 @@ namespace Assets.Scripts.Generation
 
         private void PathfindHallways()
         {
-            DungeonPathfinder pathfinder = new DungeonPathfinder(grid, settings.gridWidth, settings.gridHeight);
+            List<Coordinate> currentHallway;
 
-            List<Vertex> currentHallway;
-
+            bool once = false;
             foreach (MeasuredEdge edge in selectedEdges)
             {
-                currentHallway = pathfinder.FindPath(edge.u, edge.v);
+                currentHallway = DungeonPathfinder.FindPath(settings.gridWidth, settings.gridHeight, edge.u, edge.v);
 
                 if (currentHallway != null)
                 {
-                    DungeonDebug.DrawEdge(edge, 500, UnityEngine.Color.green);
+                    if (!once)
+                        DungeonDebug.DrawEdge(edge, 500, UnityEngine.Color.green);
 
                     int xIndex;
                     int yIndex;
-                    foreach (Vertex vertex in currentHallway)
+                    foreach (Coordinate coordinate in currentHallway)
                     {
-                        xIndex = (int)MathF.Round(vertex.x);
-                        yIndex = (int)MathF.Round(vertex.y);
+                        xIndex = coordinate.x;
+                        yIndex = coordinate.y;
 
                         for (int x = -2; x <= 2; x++)
                         {
@@ -195,9 +195,22 @@ namespace Assets.Scripts.Generation
                                 {
                                     if (grid[xIndex + x, yIndex + y] != TileType.Void) continue;
 
-                                    if (GetNeighborCount(xIndex + x, yIndex + y) < 9)
+                                    if (!once)
                                     {
-                                        SetTile(xIndex + x, yIndex + y, TileType.Wall);
+                                        UnityEngine.Debug.Log(GetNeighborCount(xIndex + x, yIndex + y));
+                                    }
+
+                                    // LISTEN HERE:
+                                    // The problem with this is that we are checking if things should be walls
+                                    // before we've assigned all the tiles a value, meaning they are void, which
+                                    // causes the GetNeighborCount() function to return incorrect values, marking
+                                    // everything as walls
+
+                                    SetTile(xIndex + x, yIndex + y, TileType.Floor);
+
+                                    if (GetNeighborCount(xIndex + x, yIndex + y) < 8)
+                                    {
+                                        SetTile(xIndex + x, yIndex + y, TileType.Floor);
                                     }
                                     else
                                     {
@@ -207,6 +220,8 @@ namespace Assets.Scripts.Generation
                             }
                         }
                     }
+
+                    once = true;
                 }
             }
         }
@@ -235,10 +250,10 @@ namespace Assets.Scripts.Generation
         {
             if (!WithinGrid(x, y)) return 0;
 
-            int count = 0;
-            for (int xi = -2; xi <= 2; xi++)
+            int count = -1;
+            for (int xi = -1; xi <= 1; xi++)
             {
-                for (int yi = -2; yi <= 2; yi++)
+                for (int yi = -1; yi <= 1; yi++)
                 {
                     if (grid[x + xi, y + yi] != TileType.Void)
                     {
@@ -257,7 +272,7 @@ namespace Assets.Scripts.Generation
 
         public bool TryGetRandomRoomCenter(out Vertex center)
         {
-            center = null;
+            center = new Vertex(0, 0);
 
             if (rooms == null)
             {

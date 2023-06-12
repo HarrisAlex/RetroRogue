@@ -29,18 +29,17 @@ namespace Assets.Scripts.Generation
         }
     }
 
-    public struct Edge
+    public class Edge
     {
         public Vertex u;
         public Vertex v;
 
-        public bool isBad;
+        public bool isBad = false;
 
-        public Edge(Vertex u, Vertex v, bool isBad)
+        public Edge(Vertex u, Vertex v)
         {
             this.u = u;
             this.v = v;
-            this.isBad = isBad;
         }
 
         public static bool AlmostEqual(Edge left, Edge right)
@@ -50,7 +49,7 @@ namespace Assets.Scripts.Generation
         }
     }
 
-    public struct MeasuredEdge : Edge
+    public class MeasuredEdge : Edge
     {
         public float length;
 
