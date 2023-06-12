@@ -3,12 +3,12 @@ using UnityEngine;
 
 namespace Assets.Scripts.Generation
 {
-    public class Vertex
+    public struct Vertex
     {
         public float x;
         public float y;
 
-        public static Vertex zero { get { return new Vertex(0, 0); } }
+        public static Vertex Zero { get { return new Vertex(0, 0); } }
 
         public Vertex(float x, float y)
         {
@@ -17,17 +17,30 @@ namespace Assets.Scripts.Generation
         }
     }
 
-    public class Edge
+    public struct Coordinate
+    {
+        public int x;
+        public int y;
+
+        public Coordinate(int x, int y)
+        {
+            this.x = x;
+            this.y = y;
+        }
+    }
+
+    public struct Edge
     {
         public Vertex u;
         public Vertex v;
 
-        public bool isBad = false;
+        public bool isBad;
 
-        public Edge(Vertex u, Vertex v)
+        public Edge(Vertex u, Vertex v, bool isBad)
         {
             this.u = u;
             this.v = v;
+            this.isBad = isBad;
         }
 
         public static bool AlmostEqual(Edge left, Edge right)
@@ -37,7 +50,7 @@ namespace Assets.Scripts.Generation
         }
     }
 
-    public class MeasuredEdge : Edge
+    public struct MeasuredEdge : Edge
     {
         public float length;
 
@@ -72,9 +85,9 @@ namespace Assets.Scripts.Generation
             // Terrifying equations for circumcircle 
             float diameter = (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y)) * 2;
 
-            float aSquare = Math.SquareDistance(Vertex.zero, a);
-            float bSquare = Math.SquareDistance(Vertex.zero, b);
-            float cSquare = Math.SquareDistance(Vertex.zero, c);
+            float aSquare = Math.SquareDistance(Vertex.Zero, a);
+            float bSquare = Math.SquareDistance(Vertex.Zero, b);
+            float cSquare = Math.SquareDistance(Vertex.Zero, c);
 
             float circleX = (aSquare * (b.y - c.y) + bSquare * (c.y - a.y) + cSquare * (a.y - b.y)) / diameter;
 

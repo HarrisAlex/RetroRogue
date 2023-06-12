@@ -25,43 +25,128 @@ namespace Assets.Scripts.Generation
             }
         }
 
-        private Node[,] grid;
-        private int gridWidth;
-        private int gridHeight;
-
-        private HashSet<Node> closed;
-        private List<Node> open;
-
-        public DungeonPathfinder(TileType[,] tiles, int gridWidth, int gridHeight)
+        class Grid
         {
-            this.gridWidth = gridWidth;
-            this.gridHeight = gridHeight;
+            public Node[,] nodes;
+            private int width;
+            private int height;
 
-            grid = new Node[gridWidth, gridHeight];
-
-            for (int x = 0; x < gridWidth; x++)
+            public Grid(int width, int height)
             {
-                for (int y = 0; y < gridHeight; y++)
+                nodes = new Node[width, height];
+
+                for (int x = 0; x < width; x++)
                 {
-                    grid[x, y] = new Node(new Vertex(x, y), true);
+                    for (int y = 0; y < height; y++)
+                    {
+                        nodes[x, y] = new Node(new Vertex(x, y), true);
+                    }
                 }
+
+                this.width = width;
+                this.height = height;
+            }
+
+            public Node GetNode(Vertex vertex)
+            {
+                return GetNode(vertex.x, vertex.y);
+            }
+
+            public Node GetNode(float x, float y)
+            {
+                int xCoord = FloatToInt(x);
+                int yCoord = FloatToInt(y);
+
+                if (!IsValidPosition(x, y)) return null;
+
+                return nodes[xCoord, yCoord];
+            }
+
+            public List<Node> GetNeighbors(Node node)
+            {
+                int xCoord = FloatToInt(node.position.x);
+                int yCoord = FloatToInt(node.position.y);
+
+                if (!IsValidPosition(x, y)) return null;
+
+                List<Node> result = new();
+
+                int checkX, checkY;
+                for (int xi = -1; xi <= 1; xi++)
+                {
+                    for (int yi = -1; yi <= 1; yi++)
+                    {
+                        if (xi == 0 && yi == 0)
+                        {
+                            continue;
+                        }
+
+                        checkX = xCoord + xi;
+                        checkY = yCoord + yi;
+
+                        if (IsValidPosition(checkX, checkY))
+                        {
+                            result.Add(GetNode(x, y));
+                        }
+                    }
+                }
+
+                return result;
+            }
+
+            public List<Node> GetNeighbors(float x, float y)
+            {
+                
+            }
+
+            private int FloatToInt(float number)
+            {
+                return (int)MathF.Round(number);
+            }
+
+            private bool IsValidPosition(float x, float y)
+            {
+                if (x > width || x < 0 || y > height || y < 0)
+                    return false;
+
+                return true;
+            }
+
+            private bool IsValidPosition(int x, int y)
+            {
+                if (x > width || x < 0 || y > height || y < 0)
+                    return false;
+
+                return true;
             }
         }
 
-        public List<Vertex> FindPath(Vertex start, Vertex end)
+        /// <summary>
+        /// Finds the shortest path, if any, between two positions enclsoed within a grid.
+        /// </summary>
+        /// <param name="gridWidth">Width of the grid.</param>
+        /// <param name="gridHeight">Height of the grid.</param>
+        /// <param name="start">The starting position to calculate from.</param>
+        /// <param name="end">The desintation of the path.</param>
+        /// <returns></returns>
+        public static List<Vertex> FindPath(int gridWidth, int gridHeight, Vertex start, Vertex end)
         {
-            Node startNode = grid[(int)MathF.Round(start.x), (int)MathF.Round(start.y)];
-            Node endNode = grid[(int)MathF.Round(end.x), (int)MathF.Round(end.y)];
+            Grid grid = new Grid(gridWidth, gridHeight);
 
-            open = new List<Node>();
-            closed = new HashSet<Node>();
+            Node startNode = grid.GetNode(start);
+            Node endNode = grid.GetNode(end);
 
+            List<Node> open = new();
             open.Add(startNode);
 
+            HashSet<Node> closed = new();
+
+            // Iterate while all nodes have not been checked
             while (open.Count > 0)
             {
                 Node node = open[0];
 
+                // Get cheapest next node
                 for (int i = 1; i < open.Count; i++)
                 {
                     if (open[i].fCost < node.fCost || Math.Approximately(open[i].fCost, node.fCost))
@@ -76,12 +161,14 @@ namespace Assets.Scripts.Generation
                 open.Remove(node);
                 closed.Add(node);
 
+                // Path has been found
                 if (node == endNode)
                 {
                     return RetracePath(startNode, endNode);
                 }
 
-                foreach (Node neighbor in GetNeighborNodes(node))
+                // Iterate through neighbors
+                foreach (Node neighbor in grid.GetNeighbors(node))
                 {
                     if (!neighbor.traversable || closed.Contains(neighbor))
                     {
@@ -90,6 +177,7 @@ namespace Assets.Scripts.Generation
 
                     float cost = node.gCost + Math.Distance(node.position, neighbor.position);
 
+                    // Adds each neighbor cheaper than current node to open set
                     if (cost < neighbor.gCost || !open.Contains(neighbor))
                     {
                         neighbor.gCost = cost;
@@ -107,7 +195,8 @@ namespace Assets.Scripts.Generation
             return null;
         }
 
-        private List<Vertex> RetracePath(Node startNode, Node endNode)
+        // Trace path from start to finish through parents
+        private static List<Vertex> RetracePath(Node startNode, Node endNode)
         {
             List<Vertex> path = new List<Vertex>();
             Node current = endNode;
@@ -121,32 +210,6 @@ namespace Assets.Scripts.Generation
             path.Reverse();
 
             return path;
-        }
-
-        private List<Node> GetNeighborNodes(Node node)
-        {
-            List<Node> neighbors = new List<Node>();
-
-            for (int x = -1; x <= 1; x++)
-            {
-                for (int y = -1; y <= 1; y++)
-                {
-                    if (x == 0 && y == 0)
-                    {
-                        continue;
-                    }
-
-                    int checkX = (int)MathF.Round(node.position.x) + x;
-                    int checkY = (int)MathF.Round(node.position.y) + y;
-
-                    if (checkX >= 0 && checkX < gridWidth && checkY >= 0 && checkY < gridHeight)
-                    {
-                        neighbors.Add(grid[checkX, checkY]);
-                    }
-                }
-            }
-
-            return neighbors;
         }
     }
 }
