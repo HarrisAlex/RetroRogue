@@ -7,8 +7,10 @@ namespace Assets.Scripts.Generation
     public enum TileType
     {
         Void,
-        Floor,
-        Wall,
+        HallwayFloor,
+        RoomFloor,
+        HallwayWall,
+        RoomWall
     }
 
     public class DungeonGenerator
@@ -115,11 +117,11 @@ namespace Assets.Scripts.Generation
                             if (x == newRoom.xPosition || x == newRoom.xPosition + newRoom.width
                                 || y == newRoom.yPosition || y == newRoom.yPosition + newRoom.height)
                             {
-                                grid[x, y] = TileType.Wall;
+                                grid[x, y] = TileType.RoomWall;
                             }
                             else
                             {
-                                grid[x, y] = TileType.Floor;
+                                grid[x, y] = TileType.RoomFloor;
                             }
                         }
                     }
@@ -170,16 +172,14 @@ namespace Assets.Scripts.Generation
         {
             List<Coordinate> currentHallway;
 
-            bool once = false;
+            bool a = false;
+
             foreach (MeasuredEdge edge in selectedEdges)
             {
                 currentHallway = DungeonPathfinder.FindPath(settings.gridWidth, settings.gridHeight, edge.u, edge.v);
 
                 if (currentHallway != null)
                 {
-                    if (!once)
-                        DungeonDebug.DrawEdge(edge, 500, UnityEngine.Color.green);
-
                     int xIndex;
                     int yIndex;
                     foreach (Coordinate coordinate in currentHallway)
@@ -191,37 +191,49 @@ namespace Assets.Scripts.Generation
                         {
                             for (int y = -2; y <= 2; y++)
                             {
-                                if (WithinGrid(xIndex + x, yIndex + y))
+                                if (!WithinGrid(xIndex + x, yIndex + y)) continue;
+                                if (grid[xIndex + x, yIndex + y] != TileType.Void) continue;
+
+                                SetTile(xIndex + x, yIndex + y, TileType.HallwayFloor);
+                            }
+                        }
+                    }
+
+                    foreach (Coordinate coordinate in currentHallway)
+                    {
+                        xIndex = coordinate.x;
+                        yIndex = coordinate.y;
+
+                        if (!a)
+                        {
+                            DungeonDebug.DrawEdge(edge, 500, UnityEngine.Color.green);
+                        }
+
+                        for (int x = -2; x <= 2; x++)
+                        {
+                            for (int y = -2; y <= 2; y++)
+                            {
+                                if (!WithinGrid(xIndex + x, yIndex + y)) continue;
+                                if (grid[xIndex + x, yIndex + y] != TileType.HallwayFloor && grid[xIndex + x, yIndex + y] != TileType.RoomWall) continue;
+
+                                if (!a)
+                                    UnityEngine.Debug.Log(GetNeighborCount(xIndex + x, yIndex + y, new TileType[] { TileType.HallwayFloor }));
+
+                                if (GetNeighborCount(xIndex + x, yIndex + y, new TileType[] { TileType.HallwayFloor, TileType.RoomFloor, TileType.RoomWall }) > 7) continue;
+
+                                if (grid[xIndex + x, yIndex + y] == TileType.RoomWall)
                                 {
-                                    if (grid[xIndex + x, yIndex + y] != TileType.Void) continue;
-
-                                    if (!once)
-                                    {
-                                        UnityEngine.Debug.Log(GetNeighborCount(xIndex + x, yIndex + y));
-                                    }
-
-                                    // LISTEN HERE:
-                                    // The problem with this is that we are checking if things should be walls
-                                    // before we've assigned all the tiles a value, meaning they are void, which
-                                    // causes the GetNeighborCount() function to return incorrect values, marking
-                                    // everything as walls
-
-                                    SetTile(xIndex + x, yIndex + y, TileType.Floor);
-
-                                    if (GetNeighborCount(xIndex + x, yIndex + y) < 8)
-                                    {
-                                        SetTile(xIndex + x, yIndex + y, TileType.Floor);
-                                    }
-                                    else
-                                    {
-                                        SetTile(xIndex + x, yIndex + y, TileType.Wall);
-                                    }
+                                    SetTile(xIndex + x, yIndex + y, TileType.RoomFloor);
+                                }
+                                else
+                                {
+                                    SetTile(xIndex + x, yIndex + y, TileType.HallwayWall);
                                 }
                             }
                         }
                     }
 
-                    once = true;
+                    a = true;
                 }
             }
         }
@@ -246,18 +258,35 @@ namespace Assets.Scripts.Generation
             grid[x, y] = tileType;
         }
 
-        private int GetNeighborCount(int x, int y)
+        private int GetNeighborCount(int x, int y, TileType[] filter)
         {
             if (!WithinGrid(x, y)) return 0;
 
-            int count = -1;
+            int count = 0;
             for (int xi = -1; xi <= 1; xi++)
             {
                 for (int yi = -1; yi <= 1; yi++)
                 {
-                    if (grid[x + xi, y + yi] != TileType.Void)
+                    if (!WithinGrid(x + xi, y + yi)) continue;
+
+                    if (xi == 0 && yi == 0) continue;
+
+                    if (filter.Length > 0)
                     {
-                        count++;
+                        for (int f = 0; f < filter.Length; f++)
+                        {
+                            if (grid[x + xi, y + yi] == filter[f])
+                            {
+                                count++;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (grid[x + xi, y + yi] != TileType.Void)
+                        {
+                            count++;
+                        }
                     }
                 }
             }
