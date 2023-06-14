@@ -20,7 +20,6 @@ MonoBehaviour:
   minRoomWidth: 7
   minRoomHeight: 7
   maxRoomAttempts: 5
-  hallwayExpansion: 1
   extraHallwayGenerationChance: 0
   floorMaterial: {fileID: 2100000, guid: c06c2ce82be9f1d44abf50a55ed09bf4, type: 2}
   ceilingMaterial: {fileID: 2100000, guid: ba754d077c89ec94bbfa0106a4db17da, type: 2}
