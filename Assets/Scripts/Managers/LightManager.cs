@@ -7,6 +7,9 @@ public class LightManager : MonoBehaviour
     private static List<LightInfo> lights = new List<LightInfo>();
     private static LightManager instance;
 
+    [SerializeField, Tooltip("Maximum distance from player at which a light can be visible")]
+    private float maximumDistance = 50;
+
     public struct LightInfo
     {
         public Light light;
@@ -42,7 +45,10 @@ public class LightManager : MonoBehaviour
 
         for (int i = 0; i < lights.Count; i++)
         {
-            lights[i].light.enabled = i < 8;
+            if (i >= 7 || lights[i].distance > (maximumDistance * maximumDistance))
+                lights[i].light.enabled = false;
+            else
+                lights[i].light.enabled = true;
         }
     }
 

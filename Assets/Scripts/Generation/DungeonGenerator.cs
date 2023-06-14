@@ -7,10 +7,8 @@ namespace Assets.Scripts.Generation
     public enum TileType
     {
         Void,
-        HallwayFloor,
-        RoomFloor,
-        HallwayWall,
-        RoomWall
+        Floor,
+        Wall
     }
 
     public class DungeonGenerator
@@ -43,6 +41,7 @@ namespace Assets.Scripts.Generation
             Triangulate();
             CreateHallways();
             PathfindHallways();
+            GenerateWalls();
             AddLights();
 
             return grid;
@@ -114,15 +113,7 @@ namespace Assets.Scripts.Generation
                     {
                         for (int y = newRoom.yPosition; y <= newRoom.yPosition + newRoom.height; y++)
                         {
-                            if (x == newRoom.xPosition || x == newRoom.xPosition + newRoom.width
-                                || y == newRoom.yPosition || y == newRoom.yPosition + newRoom.height)
-                            {
-                                grid[x, y] = TileType.RoomWall;
-                            }
-                            else
-                            {
-                                grid[x, y] = TileType.RoomFloor;
-                            }
+                            grid[x, y] = TileType.Floor;
                         }
                     }
 
@@ -172,8 +163,6 @@ namespace Assets.Scripts.Generation
         {
             List<Coordinate> currentHallway;
 
-            bool a = false;
-
             foreach (MeasuredEdge edge in selectedEdges)
             {
                 currentHallway = DungeonPathfinder.FindPath(settings.gridWidth, settings.gridHeight, edge.u, edge.v);
@@ -184,56 +173,35 @@ namespace Assets.Scripts.Generation
                     int yIndex;
                     foreach (Coordinate coordinate in currentHallway)
                     {
-                        xIndex = coordinate.x;
-                        yIndex = coordinate.y;
-
-                        for (int x = -2; x <= 2; x++)
+                        for (int x = -settings.hallwayExpansion; x <= settings.hallwayExpansion; x++)
                         {
-                            for (int y = -2; y <= 2; y++)
+                            for (int y = -settings.hallwayExpansion; y <= settings.hallwayExpansion; y++)
                             {
-                                if (!WithinGrid(xIndex + x, yIndex + y)) continue;
-                                if (grid[xIndex + x, yIndex + y] != TileType.Void) continue;
+                                xIndex = coordinate.x + x;
+                                yIndex = coordinate.y + y;
+                                if (!WithinGrid(xIndex, yIndex)) continue;
+                                if (grid[xIndex, yIndex] != TileType.Void) continue;
 
-                                SetTile(xIndex + x, yIndex + y, TileType.HallwayFloor);
+                                SetTile(xIndex, yIndex, TileType.Floor);
                             }
                         }
                     }
+                }
+            }
+        }
 
-                    foreach (Coordinate coordinate in currentHallway)
+        private void GenerateWalls()
+        {
+            for (int x = 0; x < settings.gridWidth; x++)
+            {
+                for (int y = 0; y < settings.gridHeight; y++)
+                {
+                    if (grid[x, y] != TileType.Void) continue;
+
+                    if (GetNeighborCount(x, y, TileType.Floor) < 8)
                     {
-                        xIndex = coordinate.x;
-                        yIndex = coordinate.y;
-
-                        if (!a)
-                        {
-                            DungeonDebug.DrawEdge(edge, 500, UnityEngine.Color.green);
-                        }
-
-                        for (int x = -2; x <= 2; x++)
-                        {
-                            for (int y = -2; y <= 2; y++)
-                            {
-                                if (!WithinGrid(xIndex + x, yIndex + y)) continue;
-                                if (grid[xIndex + x, yIndex + y] != TileType.HallwayFloor && grid[xIndex + x, yIndex + y] != TileType.RoomWall) continue;
-
-                                if (!a)
-                                    UnityEngine.Debug.Log(GetNeighborCount(xIndex + x, yIndex + y, new TileType[] { TileType.HallwayFloor }));
-
-                                if (GetNeighborCount(xIndex + x, yIndex + y, new TileType[] { TileType.HallwayFloor, TileType.RoomFloor, TileType.RoomWall }) > 7) continue;
-
-                                if (grid[xIndex + x, yIndex + y] == TileType.RoomWall)
-                                {
-                                    SetTile(xIndex + x, yIndex + y, TileType.RoomFloor);
-                                }
-                                else
-                                {
-                                    SetTile(xIndex + x, yIndex + y, TileType.HallwayWall);
-                                }
-                            }
-                        }
+                        SetTile(x, y, TileType.Wall);
                     }
-
-                    a = true;
                 }
             }
         }
@@ -258,7 +226,7 @@ namespace Assets.Scripts.Generation
             grid[x, y] = tileType;
         }
 
-        private int GetNeighborCount(int x, int y, TileType[] filter)
+        private int GetNeighborCount(int x, int y, TileType filter)
         {
             if (!WithinGrid(x, y)) return 0;
 
@@ -271,23 +239,8 @@ namespace Assets.Scripts.Generation
 
                     if (xi == 0 && yi == 0) continue;
 
-                    if (filter.Length > 0)
-                    {
-                        for (int f = 0; f < filter.Length; f++)
-                        {
-                            if (grid[x + xi, y + yi] == filter[f])
-                            {
-                                count++;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (grid[x + xi, y + yi] != TileType.Void)
-                        {
-                            count++;
-                        }
-                    }
+                    if (grid[x + xi, y + yi] != filter)
+                        count++;
                 }
             }
 
@@ -296,7 +249,7 @@ namespace Assets.Scripts.Generation
 
         private bool WithinGrid(int x, int y)
         {
-            return !(x < 0 || y < 0 || x > settings.gridWidth || y > settings.gridHeight);
+            return (x >= 0 && y >= 0 && x < settings.gridWidth && y < settings.gridHeight);
         }
 
         public bool TryGetRandomRoomCenter(out Vertex center)

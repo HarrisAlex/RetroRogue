@@ -24,7 +24,7 @@ namespace Assets.Scripts.Generation
             {
                 for (int y = 0; y < settings.gridHeight; y++)
                 {
-                    if (grid[x, y] == TileType.RoomWall || grid[x, y] == TileType.HallwayWall)
+                    if (grid[x, y] == TileType.Wall)
                     {
                         CreateWall(x, y, 0);
                     }
