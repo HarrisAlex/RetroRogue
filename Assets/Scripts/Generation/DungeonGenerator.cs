@@ -4,7 +4,6 @@ using Random = System.Random;
 
 namespace Assets.Scripts.Generation
 {
-    [Flags]
     public enum TileType
     {
         Void = 0,
@@ -15,31 +14,30 @@ namespace Assets.Scripts.Generation
         TopRightCorner = 16,
         BottomLeftCorner = 32,
         BottomRightCorner = 64,
-        Floor = RoomFloor | HallwayFloor
+        Floor = RoomFloor & HallwayFloor
     }
 
     public class DungeonGenerator
     {
         private Random random;
 
-        // bool = isRoom
         private TileType[,] grid;
         public List<Room> rooms { get; private set; }
         private List<Edge> edges;
         private HashSet<MeasuredEdge> selectedEdges;
 
-        private GenerationSettings settings;
+        public GenerationSettings Settings { get; private set; }
 
         public DungeonGenerator(GenerationSettings settings)
         {
-            this.settings = settings;
+            this.Settings = settings;
         }
 
         public TileType[,] Generate(int seed)
         {
             random = new Random(seed);
 
-            grid = new TileType[settings.gridWidth, settings.gridHeight];
+            grid = new TileType[Settings.gridWidth, Settings.gridHeight];
             rooms = new List<Room>();
 
             InitializeGrid();
@@ -56,9 +54,9 @@ namespace Assets.Scripts.Generation
 
         private void InitializeGrid()
         {
-            for (int x = 0; x < settings.gridWidth; x++)
+            for (int x = 0; x < Settings.gridWidth; x++)
             {
-                for (int y = 0; y < settings.gridHeight; y++)
+                for (int y = 0; y < Settings.gridHeight; y++)
                 {
                     grid[x, y] = TileType.Void;
                 }
@@ -70,7 +68,7 @@ namespace Assets.Scripts.Generation
             int attempts;
             bool canAddRoom;
 
-            for (int i = 0; i < settings.roomCount; i++)
+            for (int i = 0; i < Settings.roomCount; i++)
             {
                 Room newRoom = new Room();
 
@@ -78,19 +76,19 @@ namespace Assets.Scripts.Generation
                 attempts = 0;
 
                 // Allows for multiple iterations in case of intersections or reaching outside grid
-                while (!canAddRoom && attempts < settings.maxRoomAttempts)
+                while (!canAddRoom && attempts < Settings.maxRoomAttempts)
                 {
                     canAddRoom = true;
 
                     newRoom = new Room(
-                        random.Next(settings.minRoomWidth, settings.gridWidth - settings.maxRoomWidth),
-                        random.Next(settings.minRoomHeight, settings.gridHeight - settings.maxRoomHeight),
-                        random.Next(settings.minRoomWidth, settings.maxRoomWidth + 1),
-                        random.Next(settings.minRoomHeight, settings.maxRoomHeight + 1)
+                        random.Next(Settings.minRoomWidth, Settings.gridWidth - Settings.maxRoomWidth),
+                        random.Next(Settings.minRoomHeight, Settings.gridHeight - Settings.maxRoomHeight),
+                        random.Next(Settings.minRoomWidth, Settings.maxRoomWidth + 1),
+                        random.Next(Settings.minRoomHeight, Settings.maxRoomHeight + 1)
                         );
 
                     // Check if room is within grid
-                    if (!newRoom.WithinGrid(settings.gridWidth, settings.gridHeight))
+                    if (!newRoom.WithinGrid(Settings.gridWidth, Settings.gridHeight))
                     {
                         canAddRoom = false;
                         attempts++;
@@ -159,7 +157,7 @@ namespace Assets.Scripts.Generation
 
             foreach (Edge edge in remainingEdges)
             {
-                if (random.Next(0, 100) < settings.extraHallwayGenerationChance)
+                if (random.Next(0, 100) < Settings.extraHallwayGenerationChance)
                 {
                     selectedEdges.Add(new MeasuredEdge(edge));
                 }
@@ -172,7 +170,7 @@ namespace Assets.Scripts.Generation
 
             foreach (MeasuredEdge edge in selectedEdges)
             {
-                currentHallway = DungeonPathfinder.FindPath(settings.gridWidth, settings.gridHeight, edge.u, edge.v);
+                currentHallway = DungeonPathfinder.FindPath(Settings.gridWidth, Settings.gridHeight, edge.u, edge.v);
 
                 if (currentHallway != null)
                 {
@@ -180,9 +178,9 @@ namespace Assets.Scripts.Generation
                     int yIndex;
                     foreach (Coordinate coordinate in currentHallway)
                     {
-                        for (int x = -settings.hallwayExpansion; x <= settings.hallwayExpansion; x++)
+                        for (int x = -Settings.hallwayExpansion; x <= Settings.hallwayExpansion; x++)
                         {
-                            for (int y = -settings.hallwayExpansion; y <= settings.hallwayExpansion; y++)
+                            for (int y = -Settings.hallwayExpansion; y <= Settings.hallwayExpansion; y++)
                             {
                                 xIndex = coordinate.x + x;
                                 yIndex = coordinate.y + y;
@@ -199,16 +197,14 @@ namespace Assets.Scripts.Generation
 
         private void GenerateWalls()
         {
-            for (int x = 0; x < settings.gridWidth; x++)
+            for (int x = 0; x < Settings.gridWidth; x++)
             {
-                for (int y = 0; y < settings.gridHeight; y++)
+                for (int y = 0; y < Settings.gridHeight; y++)
                 {
                     if (grid[x, y] == TileType.Void)
                     {
-                        if (GetNeighborCount(x, y, TileType.RoomFloor | TileType.HallwayFloor) < 8)
-                        {
+                        if (IsWall(x, y))
                             SetTile(x, y, TileType.Wall);
-                        }
                     }
                 }
             }
@@ -218,9 +214,9 @@ namespace Assets.Scripts.Generation
         {
             TileType type;
 
-            for (int x = 0; x < settings.gridWidth; x++)
+            for (int x = 0; x < Settings.gridWidth; x++)
             {
-                for (int y = 0; y < settings.gridHeight; y++)
+                for (int y = 0; y < Settings.gridHeight; y++)
                 {
                     if (grid[x, y] != TileType.HallwayFloor) continue;
 
@@ -252,11 +248,10 @@ namespace Assets.Scripts.Generation
             grid[x, y] = tileType;
         }
 
-        private int GetNeighborCount(int x, int y, TileType filter)
+        private bool IsWall(int x, int y)
         {
-            if (!WithinGrid(x, y)) return 0;
+            if (!WithinGrid(x, y)) return false;
 
-            int count = 0;
             for (int xi = -1; xi <= 1; xi++)
             {
                 for (int yi = -1; yi <= 1; yi++)
@@ -265,12 +260,12 @@ namespace Assets.Scripts.Generation
 
                     if (xi == 0 && yi == 0) continue;
 
-                    if ((grid[x + xi, y + yi] & TileType.Floor) == 0)
-                        count++;
+                    if (grid[x + xi, y + yi] == TileType.RoomFloor || grid[x + xi, y + yi] == TileType.HallwayFloor)
+                        return true;
                 }
             }
 
-            return count;
+            return false;
         }
 
         private bool TryGetCornerType(int x, int y, out TileType type)
@@ -336,12 +331,12 @@ namespace Assets.Scripts.Generation
 
         private bool WithinGrid(int x, int y)
         {
-            return (x >= 0 && y >= 0 && x < settings.gridWidth && y < settings.gridHeight);
+            return (x >= 0 && y >= 0 && x < Settings.gridWidth && y < Settings.gridHeight);
         }
 
         private bool WithinGrid(Coordinate coords)
         {
-            return (coords.x >= 0 && coords.y >= 0 && coords.x < settings.gridWidth && coords.y < settings.gridHeight);
+            return (coords.x >= 0 && coords.y >= 0 && coords.x < Settings.gridWidth && coords.y < Settings.gridHeight);
         }
 
         public TileType GetCoordinate(int x, int y)
@@ -389,64 +384,6 @@ namespace Assets.Scripts.Generation
 
             center = rooms[random.Next(0, rooms.Count - 1)].GetCenter();
             return true;
-        }
-    }
-
-    public class Room
-    {
-        public int xPosition;
-        public int yPosition;
-
-        public int width;
-        public int height;
-
-        public List<Vertex> lights;
-
-        public Room() { }
-
-        public Room(int xPosition, int yPosition, int width, int height)
-        {
-            this.xPosition = xPosition;
-            this.yPosition = yPosition;
-
-            this.width = width;
-            this.height = height;
-        }
-
-        public Vertex GetCenter()
-        {
-            return new Vertex(xPosition + (width / 2), yPosition + (height / 2));
-        }
-
-        public List<Vertex> GetCorners()
-        {
-            List<Vertex> vertices = new List<Vertex>();
-
-            vertices.Add(new Vertex(xPosition, yPosition));
-            vertices.Add(new Vertex(xPosition, yPosition + height));
-            vertices.Add(new Vertex(xPosition + width, yPosition + height));
-            vertices.Add(new Vertex(xPosition + width, yPosition));
-
-            return vertices;
-        }
-
-        public bool WithinGrid(int gridWidth, int gridHeight)
-        {
-            return xPosition + width < gridWidth || yPosition + height < gridHeight;
-        }
-
-        public static bool RoomsIntersect(Room room1, Room room2, int spacing)
-        {
-            return !((room1.xPosition - spacing >= (room2.xPosition + room2.width + spacing))
-                || ((room1.xPosition + room1.width + spacing) <= room2.xPosition - spacing)
-                || (room1.yPosition - spacing >= (room2.yPosition + room2.height + spacing))
-                || ((room1.yPosition + room1.height + spacing) <= room2.yPosition - spacing));
-        }
-
-        public bool ContainsPoint(Vertex vertex)
-        {
-            return xPosition < vertex.x && (xPosition + width) > vertex.x
-                && yPosition < vertex.y && (yPosition + height) > vertex.y;
         }
     }
 }

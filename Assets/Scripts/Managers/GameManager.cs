@@ -32,10 +32,14 @@ public class GameManager : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
-        // Create dungeon and get spawn point
-        playerSpawnPosition = DungeonRenderer.RenderDungeon(dungeonSettings);
+        // Generate dungeon
+        DungeonGenerator dungeon = new DungeonGenerator(dungeonSettings);
+        dungeon.Generate((int)DateTime.Now.Ticks);
 
-        // Spawn Player
+        // Render dungeon
+        playerSpawnPosition = DungeonRenderer.RenderDungeon(dungeon);
+
+        // Spawn Player and register torch with light manager
         player = Instantiate(playerPrefab, playerSpawnPosition, Quaternion.identity, null).transform;
         LightManager.AddLight(player.GetChild(1).GetComponent<Light>());
 
