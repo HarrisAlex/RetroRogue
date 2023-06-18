@@ -24,9 +24,23 @@ namespace Assets.Scripts.Generation
             {
                 for (int y = 0; y < settings.gridHeight; y++)
                 {
-                    if (grid[x, y] == TileType.Wall)
+                    switch (dungeonGenerator.GetCoordinate(x, y))
                     {
-                        CreateWall(x, y, 0);
+                        case TileType.Wall:
+                            CreateWall(x, y, 0);
+                            break;
+                        case TileType.TopLeftCorner:
+                            CreateCorner(x, y, TileType.TopLeftCorner);
+                            break;
+                        case TileType.TopRightCorner:
+                            CreateCorner(x, y, TileType.TopRightCorner);
+                            break;
+                        case TileType.BottomLeftCorner:
+                            CreateCorner(x, y, TileType.BottomLeftCorner);
+                            break;
+                        case TileType.BottomRightCorner:
+                            CreateCorner(x, y, TileType.BottomRightCorner);
+                            break;
                     }
                 }
             }
@@ -61,18 +75,52 @@ namespace Assets.Scripts.Generation
             }
         }
 
-        private static void CreateWall(int x, int y, float angle)
+        private static void CreateWall(float x, float y, float angle)
         {
             if (root == null)
             {
                 root = new GameObject("Dungeon").transform;
             }
 
+            float scale = Mathf.Abs(angle) < 1 ? 1 : 1.415f;
+
             Transform go = GameObject.CreatePrimitive(PrimitiveType.Cube).transform;
             go.position = new Vector3(x, 1.5f, y);
-            go.localScale = new Vector3(1, 3, Mathf.Abs(angle) < 1 ? 1 : 1.415f);
+            go.localScale = new Vector3(scale, 3, scale);
             go.eulerAngles = new Vector3(0, angle, 0);
             go.parent = root;
+        }
+
+        private static void CreateCorner(int x, int y, TileType cornerType)
+        {
+            float angle = 0;
+            float xPos = x, yPos = y;
+
+            switch (cornerType)
+            {
+                case TileType.TopLeftCorner:
+                    angle = 45;
+                    xPos = x - 0.5f;
+                    yPos = y + 0.5f;
+                    break;
+                case TileType.BottomRightCorner:
+                    angle = 45;
+                    xPos = x + 0.5f;
+                    yPos = y - 0.5f;
+                    break;
+                case TileType.BottomLeftCorner:
+                    angle = -45;
+                    xPos = x - 0.5f;
+                    yPos = y - 0.5f;
+                    break;
+                case TileType.TopRightCorner:
+                    angle = -45;
+                    xPos = x + 0.5f;
+                    yPos = y + 0.5f;
+                    break;
+            }
+
+            CreateWall(xPos, yPos, angle);
         }
 
         private static MeshDescription CreatePlaneDescription(GenerationSettings settings)

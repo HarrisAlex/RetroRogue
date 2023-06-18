@@ -4,11 +4,18 @@ using Random = System.Random;
 
 namespace Assets.Scripts.Generation
 {
+    [Flags]
     public enum TileType
     {
-        Void,
-        Floor,
-        Wall
+        Void = 0,
+        RoomFloor = 1,
+        HallwayFloor = 2,
+        Wall = 4,
+        TopLeftCorner = 8,
+        TopRightCorner = 16,
+        BottomLeftCorner = 32,
+        BottomRightCorner = 64,
+        Floor = RoomFloor | HallwayFloor
     }
 
     public class DungeonGenerator
@@ -20,7 +27,6 @@ namespace Assets.Scripts.Generation
         public List<Room> rooms { get; private set; }
         private List<Edge> edges;
         private HashSet<MeasuredEdge> selectedEdges;
-        //public List<Vertex> lights { get; private set; }
 
         private GenerationSettings settings;
 
@@ -42,6 +48,7 @@ namespace Assets.Scripts.Generation
             CreateHallways();
             PathfindHallways();
             GenerateWalls();
+            FindInsetCorners();
             AddLights();
 
             return grid;
@@ -113,7 +120,7 @@ namespace Assets.Scripts.Generation
                     {
                         for (int y = newRoom.yPosition; y <= newRoom.yPosition + newRoom.height; y++)
                         {
-                            grid[x, y] = TileType.Floor;
+                            grid[x, y] = TileType.RoomFloor;
                         }
                     }
 
@@ -182,7 +189,7 @@ namespace Assets.Scripts.Generation
                                 if (!WithinGrid(xIndex, yIndex)) continue;
                                 if (grid[xIndex, yIndex] != TileType.Void) continue;
 
-                                SetTile(xIndex, yIndex, TileType.Floor);
+                                SetTile(xIndex, yIndex, TileType.HallwayFloor);
                             }
                         }
                     }
@@ -196,11 +203,30 @@ namespace Assets.Scripts.Generation
             {
                 for (int y = 0; y < settings.gridHeight; y++)
                 {
-                    if (grid[x, y] != TileType.Void) continue;
-
-                    if (GetNeighborCount(x, y, TileType.Floor) < 8)
+                    if (grid[x, y] == TileType.Void)
                     {
-                        SetTile(x, y, TileType.Wall);
+                        if (GetNeighborCount(x, y, TileType.RoomFloor | TileType.HallwayFloor) < 8)
+                        {
+                            SetTile(x, y, TileType.Wall);
+                        }
+                    }
+                }
+            }
+        }
+
+        private void FindInsetCorners()
+        {
+            TileType type;
+
+            for (int x = 0; x < settings.gridWidth; x++)
+            {
+                for (int y = 0; y < settings.gridHeight; y++)
+                {
+                    if (grid[x, y] != TileType.HallwayFloor) continue;
+
+                    if (TryGetCornerType(x, y, out type))
+                    {
+                        SetTile(x, y, type);
                     }
                 }
             }
@@ -239,7 +265,7 @@ namespace Assets.Scripts.Generation
 
                     if (xi == 0 && yi == 0) continue;
 
-                    if (grid[x + xi, y + yi] != filter)
+                    if ((grid[x + xi, y + yi] & TileType.Floor) == 0)
                         count++;
                 }
             }
@@ -247,9 +273,104 @@ namespace Assets.Scripts.Generation
             return count;
         }
 
+        private bool TryGetCornerType(int x, int y, out TileType type)
+        {
+            type = TileType.HallwayFloor;
+
+            if (!WithinGrid(x, y)) return false;
+
+            Coordinate left = new Coordinate(x - 1, y);
+            Coordinate right = new Coordinate(x + 1, y);
+            Coordinate top = new Coordinate(x, y + 1);
+            Coordinate bottom = new Coordinate(x, y - 1);
+
+            TileType tile1, tile2;
+
+            // Top-left
+            if (TryGetCoordinate(top, out tile1) && TryGetCoordinate(left, out tile2))
+            {
+                if (tile1 == TileType.Wall && tile2 == TileType.Wall)
+                {
+                    type = TileType.TopLeftCorner;
+
+                    return true;
+                }
+            }
+
+            // Top-Right
+            if (TryGetCoordinate(top, out tile1) && TryGetCoordinate(right, out tile2))
+            {
+                if (tile1 == TileType.Wall && tile2 == TileType.Wall)
+                {
+                    type = TileType.TopRightCorner;
+
+                    return true;
+                }
+            }
+
+            // Bottom-left
+            if (TryGetCoordinate(bottom, out tile1) && TryGetCoordinate(left, out tile2))
+            {
+                if (tile1 == TileType.Wall && tile2 == TileType.Wall)
+                {
+                    type = TileType.BottomLeftCorner;
+
+                    return true;
+                }
+            }
+
+            // Bottom-right
+            if (TryGetCoordinate(bottom, out tile1) && TryGetCoordinate(right, out tile2))
+            {
+                if (tile1 == TileType.Wall && tile2 == TileType.Wall)
+                {
+                    type = TileType.BottomRightCorner;
+
+                    return true;
+                }
+            }
+
+
+            return false;
+        }
+
         private bool WithinGrid(int x, int y)
         {
             return (x >= 0 && y >= 0 && x < settings.gridWidth && y < settings.gridHeight);
+        }
+
+        private bool WithinGrid(Coordinate coords)
+        {
+            return (coords.x >= 0 && coords.y >= 0 && coords.x < settings.gridWidth && coords.y < settings.gridHeight);
+        }
+
+        public TileType GetCoordinate(int x, int y)
+        {
+            if (WithinGrid(x, y))
+            {
+                return grid[x, y];
+            }
+
+            return TileType.Void;
+        }
+
+        public TileType GetCoordinate(Coordinate coordinate)
+        {
+            return GetCoordinate(coordinate.x, coordinate.y);
+        }
+
+        private bool TryGetCoordinate(Coordinate coordinate, out TileType type)
+        {
+            type = TileType.Void;
+
+            if (WithinGrid(coordinate))
+            {
+                type = grid[coordinate.x, coordinate.y];
+
+                return true;
+            }
+
+            return false;
         }
 
         public bool TryGetRandomRoomCenter(out Vertex center)
