@@ -1,5 +1,5 @@
-﻿using System.Collections;
-using UnityEngine;
+﻿using UnityEngine;
+using static Assets.Scripts.Generation.Geometry;
 
 namespace Assets.Scripts.Generation
 {
@@ -19,7 +19,7 @@ namespace Assets.Scripts.Generation
 
         public static void DrawEdge(object edge, float time, Color color)
         {
-            if (edge.GetType() != typeof(Edge) && edge.GetType() != typeof(MeasuredEdge))
+            if (edge.GetType() != typeof(Edge))
                 return;
 
             Edge tmpEdge = (Edge)edge;

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using static Assets.Scripts.Generation.Geometry;
 using Random = System.Random;
 
 namespace Assets.Scripts.Generation
@@ -17,14 +18,72 @@ namespace Assets.Scripts.Generation
         Floor = RoomFloor & HallwayFloor
     }
 
+    class Room
+    {
+        public int xPosition;
+        public int yPosition;
+
+        public int width;
+        public int height;
+
+        public List<Vertex> lights;
+
+        public Room() { }
+
+        public Room(int xPosition, int yPosition, int width, int height)
+        {
+            this.xPosition = xPosition;
+            this.yPosition = yPosition;
+
+            this.width = width;
+            this.height = height;
+        }
+
+        public Vertex GetCenter()
+        {
+            return new Vertex(xPosition + (width / 2), yPosition + (height / 2));
+        }
+
+        public List<Vertex> GetCorners()
+        {
+            List<Vertex> vertices = new();
+
+            vertices.Add(new Vertex(xPosition, yPosition));
+            vertices.Add(new Vertex(xPosition, yPosition + height));
+            vertices.Add(new Vertex(xPosition + width, yPosition + height));
+            vertices.Add(new Vertex(xPosition + width, yPosition));
+
+            return vertices;
+        }
+
+        public bool WithinGrid(int gridWidth, int gridHeight)
+        {
+            return xPosition + width < gridWidth || yPosition + height < gridHeight;
+        }
+
+        public static bool RoomsIntersect(Room room1, Room room2, int spacing)
+        {
+            return !((room1.xPosition - spacing >= (room2.xPosition + room2.width + spacing))
+                || ((room1.xPosition + room1.width + spacing) <= room2.xPosition - spacing)
+                || (room1.yPosition - spacing >= (room2.yPosition + room2.height + spacing))
+                || ((room1.yPosition + room1.height + spacing) <= room2.yPosition - spacing));
+        }
+
+        public bool ContainsPoint(Vertex vertex)
+        {
+            return xPosition < vertex.x && (xPosition + width) > vertex.x
+                && yPosition < vertex.y && (yPosition + height) > vertex.y;
+        }
+    }
+
     public class DungeonGenerator
     {
         private Random random;
 
         private TileType[,] grid;
-        public List<Room> rooms { get; private set; }
+        private List<Room> Rooms { get; set; }
         private List<Edge> edges;
-        private HashSet<MeasuredEdge> selectedEdges;
+        private HashSet<Edge> selectedEdges;
 
         public GenerationSettings Settings { get; private set; }
 
@@ -38,9 +97,17 @@ namespace Assets.Scripts.Generation
             random = new Random(seed);
 
             grid = new TileType[Settings.gridWidth, Settings.gridHeight];
-            rooms = new List<Room>();
+            Rooms = new List<Room>();
 
-            InitializeGrid();
+            // Initialize grid
+            for (int x = 0; x < Settings.gridWidth; x++)
+            {
+                for (int y = 0; y < Settings.gridHeight; y++)
+                {
+                    grid[x, y] = TileType.Void;
+                }
+            }
+
             CreateRooms();
             Triangulate();
             CreateHallways();
@@ -52,17 +119,6 @@ namespace Assets.Scripts.Generation
             return grid;
         }
 
-        private void InitializeGrid()
-        {
-            for (int x = 0; x < Settings.gridWidth; x++)
-            {
-                for (int y = 0; y < Settings.gridHeight; y++)
-                {
-                    grid[x, y] = TileType.Void;
-                }
-            }
-        }
-
         private void CreateRooms()
         {
             int attempts;
@@ -70,7 +126,7 @@ namespace Assets.Scripts.Generation
 
             for (int i = 0; i < Settings.roomCount; i++)
             {
-                Room newRoom = new Room();
+                Room newRoom = new();
 
                 canAddRoom = false;
                 attempts = 0;
@@ -97,7 +153,7 @@ namespace Assets.Scripts.Generation
                     }
 
                     // Check for intersection with other rooms
-                    foreach (Room room in rooms)
+                    foreach (Room room in Rooms)
                     {
                         if (Room.RoomsIntersect(room, newRoom, 1))
                         {
@@ -111,7 +167,7 @@ namespace Assets.Scripts.Generation
 
                 if (canAddRoom)
                 {
-                    rooms.Add(newRoom);
+                    Rooms.Add(newRoom);
 
                     // Mark grid squares that new room takes up
                     for (int x = newRoom.xPosition; x <= newRoom.xPosition + newRoom.width; x++)
@@ -121,45 +177,194 @@ namespace Assets.Scripts.Generation
                             grid[x, y] = TileType.RoomFloor;
                         }
                     }
-
-                    DungeonDebug.DrawRoom(newRoom, 500, UnityEngine.Color.red);
                 }
             }
         }
 
         private void Triangulate()
         {
-            List<Vertex> vertices = new List<Vertex>();
+            List<Vertex> vertices = new();
 
             // Create midpoint for center of each room
-            foreach (Room room in rooms)
+            foreach (Room room in Rooms)
             {
                 vertices.Add(room.GetCenter());
             }
 
-            edges = DelaunayTriangulation.Triangulate(vertices);
+            List<Triangle> triangles = new();
+            edges = new();
+
+            float minX = vertices[0].x;
+            float minY = vertices[0].y;
+            float maxX = minX;
+            float maxY = minY;
+
+            // Get bounding box for vertices
+            foreach (Vertex vertex in vertices)
+            {
+                if (vertex.x < minX)
+                {
+                    minX = vertex.x;
+                }
+
+                if (vertex.y < minY)
+                {
+                    minY = vertex.y;
+                }
+
+                if (vertex.x > maxX)
+                {
+                    maxX = vertex.x;
+                }
+
+                if (vertex.y > maxY)
+                {
+                    maxY = vertex.y;
+                }
+            }
+
+            float deltaX = maxX - minX;
+            float deltaY = maxY - minY;
+            float deltaMax = MathF.Max(deltaX, deltaY);
+
+            // Create supra-triangle
+            Vertex v1 = new(minX - 1, minY - 1);
+            Vertex v2 = new(minX - 1, maxY + deltaMax);
+            Vertex v3 = new(maxX + deltaMax, minY - 1);
+
+            triangles.Add(new Triangle(v1, v2, v3));
+
+            foreach (Vertex vertex in vertices)
+            {
+                List<Edge> polygon = new();
+
+
+                foreach (Triangle triangle in triangles)
+                {
+                    if (triangle.CircumcircleContains(vertex))
+                    {
+                        triangle.isBad = true;
+
+                        polygon.Add(new Edge(triangle.a, triangle.b));
+                        polygon.Add(new Edge(triangle.b, triangle.c));
+                        polygon.Add(new Edge(triangle.c, triangle.a));
+                    }
+                }
+
+                triangles.RemoveAll((Triangle triangle) => triangle.isBad);
+
+                for (int i = 0; i < polygon.Count; i++)
+                {
+                    for (int j = i + 1; j < polygon.Count; j++)
+                    {
+                        if (Edge.AlmostEqual(polygon[i], polygon[j]))
+                        {
+                            polygon[i].isBad = true;
+                            polygon[j].isBad = true;
+                        }
+                    }
+                }
+
+                polygon.RemoveAll((Edge edge) => edge.isBad);
+
+                foreach (Edge edge in polygon)
+                {
+                    triangles.Add(new Triangle(edge.u, edge.v, vertex));
+                }
+            }
+
+            triangles.RemoveAll((Triangle triangle) => triangle.ContainsVertex(v1)
+                || triangle.ContainsVertex(v2)
+                || triangle.ContainsVertex(v3));
+
+            HashSet<Edge> edgeSet = new();
+
+            foreach (Triangle triangle in triangles)
+            {
+                Edge ab = new(triangle.a, triangle.b);
+                Edge bc = new(triangle.b, triangle.c);
+                Edge ca = new(triangle.c, triangle.a);
+
+                if (edgeSet.Add(ab))
+                {
+                    edges.Add(ab);
+                }
+
+                if (edgeSet.Add(bc))
+                {
+                    edges.Add(bc);
+                }
+
+                if (edgeSet.Add(ca))
+                {
+                    edges.Add(ca);
+                }
+            }
         }
 
         private void CreateHallways()
         {
-            List<MeasuredEdge> tree = new List<MeasuredEdge>();
+            // Get minimum spanning tree
+            selectedEdges = new();
+
+            HashSet<Vertex> openSet = new();
+            HashSet<Vertex> closedSet = new();
 
             foreach (Edge edge in edges)
             {
-                tree.Add(new MeasuredEdge(edge.u, edge.v));
+                openSet.Add(edge.u);
+                openSet.Add(edge.v);
             }
 
-            tree = MinimumSpanningTree.GetTree(tree, tree[0].u);
+            closedSet.Add(edges[0].u);
 
-            selectedEdges = new HashSet<MeasuredEdge>(tree);
-            HashSet<Edge> remainingEdges = new HashSet<Edge>(edges);
+            while (openSet.Count > 0)
+            {
+                bool chosen = false;
+                Edge chosenEdge = null;
+                float minWeight = float.PositiveInfinity;
+
+                foreach (Edge edge in edges)
+                {
+                    int closedVertices = 0;
+
+                    if (!closedSet.Contains(edge.u))
+                        closedVertices++;
+
+                    if (!closedSet.Contains(edge.v))
+                        closedVertices++;
+
+                    if (closedVertices != 1)
+                        continue;
+
+                    if (edge.Length < minWeight)
+                    {
+                        chosenEdge = edge;
+                        chosen = true;
+                        minWeight = edge.Length;
+                    }
+                }
+
+                if (!chosen)
+                    break;
+
+                selectedEdges.Add(chosenEdge);
+                openSet.Remove(chosenEdge.u);
+                openSet.Remove(chosenEdge.v);
+                closedSet.Add(chosenEdge.u);
+                closedSet.Add(chosenEdge.v);
+            }
+
+            // Find all hallways not included in minimum spanning tree (all that are unecessary)
+            HashSet<Edge> remainingEdges = new(edges);
             remainingEdges.ExceptWith(selectedEdges);
 
+            // Randomly add unecessary hallways based on chance
             foreach (Edge edge in remainingEdges)
             {
                 if (random.Next(0, 100) < Settings.extraHallwayGenerationChance)
                 {
-                    selectedEdges.Add(new MeasuredEdge(edge));
+                    selectedEdges.Add(edge);
                 }
             }
         }
@@ -168,7 +373,7 @@ namespace Assets.Scripts.Generation
         {
             List<Coordinate> currentHallway;
 
-            foreach (MeasuredEdge edge in selectedEdges)
+            foreach (Edge edge in selectedEdges)
             {
                 currentHallway = DungeonPathfinder.FindPath(Settings.gridWidth, Settings.gridHeight, edge.u, edge.v);
 
@@ -184,6 +389,7 @@ namespace Assets.Scripts.Generation
                             {
                                 xIndex = coordinate.x + x;
                                 yIndex = coordinate.y + y;
+
                                 if (!WithinGrid(xIndex, yIndex)) continue;
                                 if (grid[xIndex, yIndex] != TileType.Void) continue;
 
@@ -212,15 +418,13 @@ namespace Assets.Scripts.Generation
 
         private void FindInsetCorners()
         {
-            TileType type;
-
             for (int x = 0; x < Settings.gridWidth; x++)
             {
                 for (int y = 0; y < Settings.gridHeight; y++)
                 {
                     if (grid[x, y] != TileType.HallwayFloor) continue;
 
-                    if (TryGetCornerType(x, y, out type))
+                    if (TryGetCornerType(x, y, out TileType type))
                     {
                         SetTile(x, y, type);
                     }
@@ -230,7 +434,7 @@ namespace Assets.Scripts.Generation
 
         private void AddLights()
         {
-            foreach (Room room in rooms)
+            foreach (Room room in Rooms)
             {
                 room.lights = new List<Vertex>();
 
@@ -274,15 +478,13 @@ namespace Assets.Scripts.Generation
 
             if (!WithinGrid(x, y)) return false;
 
-            Coordinate left = new Coordinate(x - 1, y);
-            Coordinate right = new Coordinate(x + 1, y);
-            Coordinate top = new Coordinate(x, y + 1);
-            Coordinate bottom = new Coordinate(x, y - 1);
-
-            TileType tile1, tile2;
+            Coordinate left = new(x - 1, y);
+            Coordinate right = new(x + 1, y);
+            Coordinate top = new(x, y + 1);
+            Coordinate bottom = new(x, y - 1);
 
             // Top-left
-            if (TryGetCoordinate(top, out tile1) && TryGetCoordinate(left, out tile2))
+            if (TryGetCoordinate(top, out TileType tile1) && TryGetCoordinate(left, out TileType tile2))
             {
                 if (tile1 == TileType.Wall && tile2 == TileType.Wall)
                 {
@@ -372,17 +574,17 @@ namespace Assets.Scripts.Generation
         {
             center = new Vertex(0, 0);
 
-            if (rooms == null)
+            if (Rooms == null)
             {
                 return false;
             }
 
-            if (rooms.Count < 1)
+            if (Rooms.Count < 1)
             {
                 return false;
             }
 
-            center = rooms[random.Next(0, rooms.Count - 1)].GetCenter();
+            center = Rooms[random.Next(0, Rooms.Count - 1)].GetCenter();
             return true;
         }
     }

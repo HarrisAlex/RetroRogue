@@ -1,111 +1,132 @@
-﻿using System.Collections;
+﻿using System;
 using UnityEngine;
 
 namespace Assets.Scripts.Generation
 {
-    public struct Vertex
+    public class Geometry
     {
-        public float x;
-        public float y;
-
-        public static Vertex Zero { get { return new Vertex(0, 0); } }
-
-        public Vertex(float x, float y)
+        public struct Vertex
         {
-            this.x = x;
-            this.y = y;
-        }
-    }
+            public float x;
+            public float y;
 
-    public struct Coordinate
-    {
-        public int x;
-        public int y;
+            public static Vertex Zero { get { return new Vertex(0, 0); } }
 
-        public Coordinate(int x, int y)
-        {
-            this.x = x;
-            this.y = y;
-        }
-    }
-
-    public class Edge
-    {
-        public Vertex u;
-        public Vertex v;
-
-        public bool isBad = false;
-
-        public Edge(Vertex u, Vertex v)
-        {
-            this.u = u;
-            this.v = v;
+            public Vertex(float x, float y)
+            {
+                this.x = x;
+                this.y = y;
+            }
         }
 
-        public static bool AlmostEqual(Edge left, Edge right)
+        public struct Coordinate
         {
-            return Math.Approximately(left.u, right.u) && Math.Approximately(left.v, right.v)
-                || Math.Approximately(left.u, right.v) && Math.Approximately(left.v, right.u);
-        }
-    }
+            public int x;
+            public int y;
 
-    public class MeasuredEdge : Edge
-    {
-        public float length;
-
-        public MeasuredEdge(Edge edge) : base(edge.u, edge.v)
-        {
-            length = Math.Distance(u, v);
+            public Coordinate(int x, int y)
+            {
+                this.x = x;
+                this.y = y;
+            }
         }
 
-        public MeasuredEdge(Vertex u, Vertex v) : base(u, v)
+        public class Edge
         {
-            length = Math.Distance(u, v);
-        }
-    }
+            public Vertex u;
+            public Vertex v;
 
-    class Triangle
-    {
-        public Vertex a;
-        public Vertex b;
-        public Vertex c;
+            public bool isBad = false;
 
-        public bool isBad = false;
+            public float Length
+            {
+                get
+                {
+                    return Distance(u, v);
+                }
+            }
 
-        public Triangle(Vertex a, Vertex b, Vertex c)
-        {
-            this.a = a;
-            this.b = b;
-            this.c = c;
-        }
+            public Edge(Vertex u, Vertex v)
+            {
+                this.u = u;
+                this.v = v;
+            }
 
-        public bool CircumcircleContains(Vertex vertex)
-        {
-            // Terrifying equations for circumcircle 
-            float diameter = (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y)) * 2;
-
-            float aSquare = Math.SquareDistance(Vertex.Zero, a);
-            float bSquare = Math.SquareDistance(Vertex.Zero, b);
-            float cSquare = Math.SquareDistance(Vertex.Zero, c);
-
-            float circleX = (aSquare * (b.y - c.y) + bSquare * (c.y - a.y) + cSquare * (a.y - b.y)) / diameter;
-
-            float circleY = (aSquare * (c.x - b.x) + bSquare * (a.x - c.x) + cSquare * (b.x - a.x)) / diameter;
-
-
-            // Check if vertex is inside circumcircle
-            Vertex circleCenter = new Vertex(circleX, circleY);
-            float circleRadius = Math.SquareDistance(a, circleCenter);
-            float vertexDistance = Math.SquareDistance(vertex, circleCenter);
-
-            return vertexDistance <= circleRadius;
+            public static bool AlmostEqual(Edge left, Edge right)
+            {
+                return Approximately(left.u, right.u) && Approximately(left.v, right.v)
+                    || Approximately(left.u, right.v) && Approximately(left.v, right.u);
+            }
         }
 
-        public bool ContainsVertex(Vertex vertex)
+        public class Triangle
         {
-            return Math.Distance(vertex, a) < 0.01f
-                || Math.Distance(vertex, b) < 0.01f
-                || Math.Distance(vertex, c) < 0.01f;
+            public Vertex a;
+            public Vertex b;
+            public Vertex c;
+
+            public bool isBad = false;
+
+            public Triangle(Vertex a, Vertex b, Vertex c)
+            {
+                this.a = a;
+                this.b = b;
+                this.c = c;
+            }
+
+            public bool CircumcircleContains(Vertex vertex)
+            {
+                // Terrifying equations for circumcircle 
+                float diameter = (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y)) * 2;
+
+                float aSquare = SquareDistance(Vertex.Zero, a);
+                float bSquare = SquareDistance(Vertex.Zero, b);
+                float cSquare = SquareDistance(Vertex.Zero, c);
+
+                float circleX = (aSquare * (b.y - c.y) + bSquare * (c.y - a.y) + cSquare * (a.y - b.y)) / diameter;
+
+                float circleY = (aSquare * (c.x - b.x) + bSquare * (a.x - c.x) + cSquare * (b.x - a.x)) / diameter;
+
+
+                // Check if vertex is inside circumcircle
+                Vertex circleCenter = new(circleX, circleY);
+                float circleRadius = SquareDistance(a, circleCenter);
+                float vertexDistance = SquareDistance(vertex, circleCenter);
+
+                return vertexDistance <= circleRadius;
+            }
+
+            public bool ContainsVertex(Vertex vertex)
+            {
+                return Distance(vertex, a) < 0.01f
+                    || Distance(vertex, b) < 0.01f
+                    || Distance(vertex, c) < 0.01f;
+            }
+        }
+
+        public static float Distance(Coordinate c1, Coordinate c2)
+        {
+            return MathF.Sqrt(MathF.Pow(c1.x - c2.x, 2) + MathF.Pow(c1.y - c2.y, 2));
+        }
+
+        public static float Distance(Vertex v1, Vertex v2)
+        {
+            return MathF.Sqrt(MathF.Pow(v1.x - v2.x, 2) + MathF.Pow(v1.y - v2.y, 2));
+        }
+
+        public static float SquareDistance(Vertex v1, Vertex v2)
+        {
+            return MathF.Pow(v1.x - v2.x, 2) + MathF.Pow(v1.y - v2.y, 2);
+        }
+
+        public static bool Approximately(float a, float b)
+        {
+            return MathF.Abs(a - b) <= float.Epsilon * MathF.Abs(a + b) * 2 || MathF.Abs(a - b) < float.MinValue;
+        }
+
+        public static bool Approximately(Vertex a, Vertex b)
+        {
+            return Approximately(a.x, b.x) && Approximately(a.y, b.y);
         }
     }
 }

@@ -43,20 +43,7 @@ namespace Assets.Scripts.Generation
             Transform ceiling = MeshGenerator.GenerateMesh(ceilingDescription, dungeon.Settings.ceilingMaterial);
             ceiling.position = new Vector3(0, 3, 0);
 
-            Light lightComponent;
-            foreach (Room room in dungeon.rooms)
-            {
-                Color color = Random.ColorHSV();
-
-                foreach (Vertex light in room.lights)
-                {
-                    lightComponent = CreateLight((int)light.x, (int)light.y);
-                    LightManager.AddLight(lightComponent);
-                }
-            }
-
-            Vertex randomRoomCenter;
-            if (dungeon.TryGetRandomRoomCenter(out randomRoomCenter))
+            if (dungeon.TryGetRandomRoomCenter(out Geometry.Vertex randomRoomCenter))
             {
                 return new Vector3(randomRoomCenter.x, 0, randomRoomCenter.y);
             }

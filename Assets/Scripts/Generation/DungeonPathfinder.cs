@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using static Assets.Scripts.Generation.Geometry;
 
 namespace Assets.Scripts.Generation
 {
@@ -137,7 +138,7 @@ namespace Assets.Scripts.Generation
                 // Get cheapest next node
                 for (int i = 1; i < open.Count; i++)
                 {
-                    if (open[i].fCost < node.fCost || Math.Approximately(open[i].fCost, node.fCost))
+                    if (open[i].fCost < node.fCost || Approximately(open[i].fCost, node.fCost))
                     {
                         if (open[i].hCost < node.hCost)
                         {
@@ -163,13 +164,13 @@ namespace Assets.Scripts.Generation
                         continue;
                     }
 
-                    float cost = node.gCost + Math.Distance(node.position, neighbor.position);
+                    float cost = node.gCost + Distance(node.position, neighbor.position);
 
                     // Adds each neighbor cheaper than current node to open set
                     if (cost < neighbor.gCost || !open.Contains(neighbor))
                     {
                         neighbor.gCost = cost;
-                        neighbor.hCost = Math.Distance(neighbor.position, endNode.position);
+                        neighbor.hCost = Distance(neighbor.position, endNode.position);
                         neighbor.parent = node;
 
                         if (!open.Contains(neighbor))

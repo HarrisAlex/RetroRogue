@@ -238,7 +238,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ee2df337990120746bc09c55064c6df1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  weaponController: {fileID: 0}
+  weaponController: {fileID: 9100000, guid: 278de7e4674f9404e9653e2b507d9cff, type: 2}
   animatorBlockVariable: 
 --- !u!114 &9112463688427103839
 MonoBehaviour:
