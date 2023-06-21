@@ -7,15 +7,14 @@ namespace Assets.Scripts.Generation
 {
     public enum TileType
     {
-        Void = 0,
-        RoomFloor = 1,
-        HallwayFloor = 2,
-        Wall = 4,
-        TopLeftCorner = 8,
-        TopRightCorner = 16,
-        BottomLeftCorner = 32,
-        BottomRightCorner = 64,
-        Floor = RoomFloor & HallwayFloor
+        Void,
+        RoomFloor,
+        HallwayFloor,
+        Wall,
+        TopLeftCorner,
+        TopRightCorner,
+        BottomLeftCorner,
+        BottomRightCorner,
     }
 
     class Room
@@ -100,85 +99,77 @@ namespace Assets.Scripts.Generation
             Rooms = new List<Room>();
 
             // Initialize grid
-            for (int x = 0; x < Settings.gridWidth; x++)
+            FillArea(0, 0, Settings.gridWidth - 1, Settings.gridHeight - 1, TileType.Void);
+
+            // Create rooms
+            for (int i = 0; i < Settings.roomCount; i++)
             {
-                for (int y = 0; y < Settings.gridHeight; y++)
+                Room newRoom = new();
+
+                if (TryCreateRoom(out newRoom))
                 {
-                    grid[x, y] = TileType.Void;
+                    Rooms.Add(newRoom);
+
+                    FillArea(newRoom.GetCorners(), TileType.RoomFloor);
                 }
             }
 
-            CreateRooms();
             Triangulate();
             CreateHallways();
             PathfindHallways();
-            GenerateWalls();
-            FindInsetCorners();
+
+            // Add walls
+            FillArea(0, 0, Settings.gridWidth - 1, Settings.gridHeight - 1, TileType.Wall, IsWall);
+
+            // Add inset corners
+            FillArea(0, 0, Settings.gridWidth - 1, Settings.gridHeight - 1, TileType.TopLeftCorner, IsTopLeftCorner);
+            FillArea(0, 0, Settings.gridWidth - 1, Settings.gridHeight - 1, TileType.TopRightCorner, IsTopRightCorner);
+            FillArea(0, 0, Settings.gridWidth - 1, Settings.gridHeight - 1, TileType.BottomRightCorner, IsBottomRightCorner);
+            FillArea(0, 0, Settings.gridWidth - 1, Settings.gridHeight - 1, TileType.BottomLeftCorner, IsBottomLeftCorner);
+
             AddLights();
 
             return grid;
         }
 
-        private void CreateRooms()
+        private bool TryCreateRoom(out Room newRoom)
         {
-            int attempts;
-            bool canAddRoom;
+            int attempts = 0;
+            newRoom = null;
 
-            for (int i = 0; i < Settings.roomCount; i++)
+            // Create new rooms until one is valid
+            while (newRoom == null && attempts < Settings.maxRoomAttempts)
             {
-                Room newRoom = new();
+                newRoom = new Room(
+                    random.Next(Settings.minRoomWidth, Settings.gridWidth - Settings.maxRoomWidth),
+                    random.Next(Settings.minRoomHeight, Settings.gridHeight - Settings.maxRoomHeight),
+                    random.Next(Settings.minRoomWidth, Settings.maxRoomWidth + 1),
+                    random.Next(Settings.minRoomHeight, Settings.maxRoomHeight + 1)
+                    );
 
-                canAddRoom = false;
-                attempts = 0;
-
-                // Allows for multiple iterations in case of intersections or reaching outside grid
-                while (!canAddRoom && attempts < Settings.maxRoomAttempts)
+                // Check if room is within grid
+                if (!newRoom.WithinGrid(Settings.gridWidth, Settings.gridHeight))
                 {
-                    canAddRoom = true;
+                    attempts++;
+                    newRoom = null;
 
-                    newRoom = new Room(
-                        random.Next(Settings.minRoomWidth, Settings.gridWidth - Settings.maxRoomWidth),
-                        random.Next(Settings.minRoomHeight, Settings.gridHeight - Settings.maxRoomHeight),
-                        random.Next(Settings.minRoomWidth, Settings.maxRoomWidth + 1),
-                        random.Next(Settings.minRoomHeight, Settings.maxRoomHeight + 1)
-                        );
-
-                    // Check if room is within grid
-                    if (!newRoom.WithinGrid(Settings.gridWidth, Settings.gridHeight))
-                    {
-                        canAddRoom = false;
-                        attempts++;
-
-                        continue;
-                    }
-
-                    // Check for intersection with other rooms
-                    foreach (Room room in Rooms)
-                    {
-                        if (Room.RoomsIntersect(room, newRoom, 1))
-                        {
-                            canAddRoom = false;
-                            attempts++;
-
-                            break;
-                        }
-                    }
+                    continue;
                 }
 
-                if (canAddRoom)
+                // Check for intersection with other rooms
+                foreach (Room room in Rooms)
                 {
-                    Rooms.Add(newRoom);
-
-                    // Mark grid squares that new room takes up
-                    for (int x = newRoom.xPosition; x <= newRoom.xPosition + newRoom.width; x++)
+                    if (Room.RoomsIntersect(room, newRoom, 1))
                     {
-                        for (int y = newRoom.yPosition; y <= newRoom.yPosition + newRoom.height; y++)
-                        {
-                            grid[x, y] = TileType.RoomFloor;
-                        }
+                        attempts++;
+                        newRoom = null;
+
+                        break;
                     }
                 }
             }
+
+            return newRoom != null;
         }
 
         private void Triangulate()
@@ -379,54 +370,14 @@ namespace Assets.Scripts.Generation
 
                 if (currentHallway != null)
                 {
-                    int xIndex;
-                    int yIndex;
                     foreach (Coordinate coordinate in currentHallway)
                     {
-                        for (int x = -Settings.hallwayExpansion; x <= Settings.hallwayExpansion; x++)
-                        {
-                            for (int y = -Settings.hallwayExpansion; y <= Settings.hallwayExpansion; y++)
-                            {
-                                xIndex = coordinate.x + x;
-                                yIndex = coordinate.y + y;
-
-                                if (!WithinGrid(xIndex, yIndex)) continue;
-                                if (grid[xIndex, yIndex] != TileType.Void) continue;
-
-                                SetTile(xIndex, yIndex, TileType.HallwayFloor);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        private void GenerateWalls()
-        {
-            for (int x = 0; x < Settings.gridWidth; x++)
-            {
-                for (int y = 0; y < Settings.gridHeight; y++)
-                {
-                    if (grid[x, y] == TileType.Void)
-                    {
-                        if (IsWall(x, y))
-                            SetTile(x, y, TileType.Wall);
-                    }
-                }
-            }
-        }
-
-        private void FindInsetCorners()
-        {
-            for (int x = 0; x < Settings.gridWidth; x++)
-            {
-                for (int y = 0; y < Settings.gridHeight; y++)
-                {
-                    if (grid[x, y] != TileType.HallwayFloor) continue;
-
-                    if (TryGetCornerType(x, y, out TileType type))
-                    {
-                        SetTile(x, y, type);
+                        FillArea(coordinate.x - Settings.hallwayExpansion,
+                            coordinate.y - Settings.hallwayExpansion,
+                            coordinate.x + Settings.hallwayExpansion,
+                            coordinate.y + Settings.hallwayExpansion,
+                            TileType.HallwayFloor, IsVoid
+                            );
                     }
                 }
             }
@@ -445,6 +396,8 @@ namespace Assets.Scripts.Generation
             }
         }
 
+        #region Functions for Setting Tiles
+
         private void SetTile(int x, int y, TileType tileType)
         {
             if (!WithinGrid(x, y)) return;
@@ -452,9 +405,92 @@ namespace Assets.Scripts.Generation
             grid[x, y] = tileType;
         }
 
+        /// <summary>
+        /// Fill an area defined by 4 vertices with a certain TileType.
+        /// </summary>
+        /// <param name="corners">List of vertices that define an area, usually a room.</param>
+        /// <param name="tileType">The TileType of which to set tiles in the area.</param>
+        private void FillArea(List<Vertex> corners, TileType tileType)
+        {
+            if (corners == null) return;
+            if (corners.Count < 4) return;
+
+            FillArea((int)corners[0].x, (int)corners[0].y, (int)corners[2].x, (int)corners[2].y, tileType);
+        }
+
+        /// <summary>
+        /// Fill an area as defined by coordinates with a certain TileType.
+        /// </summary>
+        /// <param name="x1">Bottom-left corner of area.</param>
+        /// <param name="y1">Bottom-left corner of area.</param>
+        /// <param name="x2">Top-right corner of area.</param>
+        /// <param name="y2">Top-rightcorner of area.</param>
+        /// <param name="tileType">The TileType of which to set tiles in the area.</param>
+        private void FillArea(int x1, int y1, int x2, int y2, TileType tileType)
+        {
+            if (!WithinGrid(x1, y1) || !WithinGrid(x2, y2)) return;
+
+            for (int x = x1; x <= x2; x++)
+            {
+                for (int y = y1; y <= y2; y++)
+                {
+                    SetTile(x, y, tileType);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Fill an area as defined by 4 vertices with a certain TileType based on a condition.
+        /// </summary>
+        /// <param name="corners">List of vertices that define an area, usually a room.</param>
+        /// <param name="tileType">The TileType of which to set tiles in the area.</param>
+        /// <param name="conditional">The function by which to determine whether a tile should be set.</param>
+        private void FillArea(List<Vertex> corners, TileType tileType, Func<int, int, bool> conditional)
+        {
+            if (corners == null) return;
+            if (corners.Count < 4) return;
+
+            FillArea((int)corners[0].x, (int)corners[0].y, (int)corners[2].x, (int)corners[2].y, tileType, conditional);
+        }
+
+        /// <summary>
+        /// Fill an area as defined by coordinates with a certain TileType based on a condition.
+        /// </summary>
+        /// <param name="x1">Bottom-left corner of area.</param>
+        /// <param name="y1">Bottom-left corner of area.</param>
+        /// <param name="x2">Top-right corner of area.</param>
+        /// <param name="y2">Top-rightcorner of area.</param>
+        /// <param name="tileType">The TileType of which to set tiles in the area.</param>
+        /// <param name="conditional">The function by which to determine whether a tile should be set.</param>
+        private void FillArea(int x1, int y1, int x2, int y2, TileType tileType, Func<int, int, bool> conditional)
+        {
+            if (!WithinGrid(x1, y1) || !WithinGrid(x2, y2)) return;
+
+            for (int x = x1; x <= x2; x++)
+            {
+                for (int y = y1; y <= y2; y++)
+                {
+                    if (!WithinGrid(x, y)) continue;
+
+                    if (conditional(x, y))
+                        SetTile(x, y, tileType);
+                }
+            }
+        }
+
+        #endregion
+
+        #region Conditional Function Presets (for FillArea())
+
+        private bool IsVoid(int x, int y)
+        {
+            return GetCoordinate(x, y) == TileType.Void;
+        }
+
         private bool IsWall(int x, int y)
         {
             if (!WithinGrid(x, y)) return false;
+            if (GetCoordinate(x, y) != TileType.Void) return false;
 
             for (int xi = -1; xi <= 1; xi++)
             {
@@ -472,74 +508,85 @@ namespace Assets.Scripts.Generation
             return false;
         }
 
-        private bool TryGetCornerType(int x, int y, out TileType type)
+        private bool IsTopLeftCorner(int x, int y)
         {
-            type = TileType.HallwayFloor;
-
             if (!WithinGrid(x, y)) return false;
+            if (GetCoordinate(x, y) != TileType.HallwayFloor) return false;
 
             Coordinate left = new(x - 1, y);
-            Coordinate right = new(x + 1, y);
             Coordinate top = new(x, y + 1);
-            Coordinate bottom = new(x, y - 1);
 
-            // Top-left
             if (TryGetCoordinate(top, out TileType tile1) && TryGetCoordinate(left, out TileType tile2))
             {
                 if (tile1 == TileType.Wall && tile2 == TileType.Wall)
                 {
-                    type = TileType.TopLeftCorner;
-
                     return true;
                 }
             }
-
-            // Top-Right
-            if (TryGetCoordinate(top, out tile1) && TryGetCoordinate(right, out tile2))
-            {
-                if (tile1 == TileType.Wall && tile2 == TileType.Wall)
-                {
-                    type = TileType.TopRightCorner;
-
-                    return true;
-                }
-            }
-
-            // Bottom-left
-            if (TryGetCoordinate(bottom, out tile1) && TryGetCoordinate(left, out tile2))
-            {
-                if (tile1 == TileType.Wall && tile2 == TileType.Wall)
-                {
-                    type = TileType.BottomLeftCorner;
-
-                    return true;
-                }
-            }
-
-            // Bottom-right
-            if (TryGetCoordinate(bottom, out tile1) && TryGetCoordinate(right, out tile2))
-            {
-                if (tile1 == TileType.Wall && tile2 == TileType.Wall)
-                {
-                    type = TileType.BottomRightCorner;
-
-                    return true;
-                }
-            }
-
 
             return false;
         }
 
-        private bool WithinGrid(int x, int y)
+        private bool IsTopRightCorner(int x, int y)
         {
-            return (x >= 0 && y >= 0 && x < Settings.gridWidth && y < Settings.gridHeight);
+            if (!WithinGrid(x, y)) return false;
+            if (GetCoordinate(x, y) != TileType.HallwayFloor) return false;
+
+            Coordinate right = new(x + 1, y);
+            Coordinate top = new(x, y + 1);
+
+            if (TryGetCoordinate(top, out TileType tile1) && TryGetCoordinate(right, out TileType tile2))
+            {
+                if (tile1 == TileType.Wall && tile2 == TileType.Wall)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
-        private bool WithinGrid(Coordinate coords)
+        private bool IsBottomLeftCorner(int x, int y)
         {
-            return (coords.x >= 0 && coords.y >= 0 && coords.x < Settings.gridWidth && coords.y < Settings.gridHeight);
+            if (!WithinGrid(x, y)) return false;
+            if (GetCoordinate(x, y) != TileType.HallwayFloor) return false;
+
+            Coordinate left = new(x - 1, y);
+            Coordinate bottom = new(x, y - 1);
+
+            if (TryGetCoordinate(bottom, out TileType tile1) && TryGetCoordinate(left, out TileType tile2))
+            {
+                if (tile1 == TileType.Wall && tile2 == TileType.Wall)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
+
+        private bool IsBottomRightCorner(int x, int y)
+        {
+            if (!WithinGrid(x, y)) return false;
+            if (GetCoordinate(x, y) != TileType.HallwayFloor) return false;
+
+            Coordinate right = new(x + 1, y);
+            Coordinate bottom = new(x, y - 1);
+
+            if (TryGetCoordinate(bottom, out TileType tile1) && TryGetCoordinate(right, out TileType tile2))
+            {
+                if (tile1 == TileType.Wall && tile2 == TileType.Wall)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        #endregion
+
+        #region Functions for Getting Tiles
 
         public TileType GetCoordinate(int x, int y)
         {
@@ -556,19 +603,40 @@ namespace Assets.Scripts.Generation
             return GetCoordinate(coordinate.x, coordinate.y);
         }
 
-        private bool TryGetCoordinate(Coordinate coordinate, out TileType type)
+        private bool TryGetCoordinate(int x, int y, out TileType type)
         {
             type = TileType.Void;
 
-            if (WithinGrid(coordinate))
+            if (WithinGrid(x, y))
             {
-                type = grid[coordinate.x, coordinate.y];
+                type = grid[x, y];
 
                 return true;
             }
 
             return false;
         }
+
+        private bool TryGetCoordinate(Coordinate coordinate, out TileType type)
+        {
+            return TryGetCoordinate(coordinate.x, coordinate.y, out type);
+        }
+
+        #endregion
+
+        #region Coordinate Validation Functions
+
+        private bool WithinGrid(int x, int y)
+        {
+            return (x >= 0 && y >= 0 && x < Settings.gridWidth && y < Settings.gridHeight);
+        }
+
+        private bool WithinGrid(Coordinate coords)
+        {
+            return (coords.x >= 0 && coords.y >= 0 && coords.x < Settings.gridWidth && coords.y < Settings.gridHeight);
+        }
+
+        #endregion
 
         public bool TryGetRandomRoomCenter(out Vertex center)
         {
