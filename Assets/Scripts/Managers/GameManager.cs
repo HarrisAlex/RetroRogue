@@ -25,7 +25,7 @@ public class GameManager : MonoBehaviour
 
         PlayerDeath += GameEnd;
 
-        //StartGame();
+        StartGame();
     }
 
     void StartGame()
@@ -51,14 +51,6 @@ public class GameManager : MonoBehaviour
     void Update()
     {
         if (isPaused) return;
-
-        if (Input.GetKeyDown(KeyCode.E))
-        {
-            dungeon = new DungeonGenerator(dungeonSettings);
-            dungeon.Generate((int)DateTime.Now.Ticks);
-
-            DungeonRenderer.RenderDungeon(dungeon);
-        }
     }
 
     private void GameEnd()

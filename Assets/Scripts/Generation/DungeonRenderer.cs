@@ -9,6 +9,12 @@ namespace Assets.Scripts.Generation
 
         public static Vector3 RenderDungeon(DungeonGenerator dungeon)
         {
+            if (root != null)
+            {
+                Object.Destroy(root.gameObject);
+                root = null;
+            }
+
             for (int x = 0; x < dungeon.Settings.gridWidth; x++)
             {
                 for (int y = 0; y < dungeon.Settings.gridHeight; y++)
@@ -38,10 +44,12 @@ namespace Assets.Scripts.Generation
             Transform floor = MeshGenerator.GenerateMesh(floorDescription, dungeon.Settings.floorMaterial);
             floor.localScale = new Vector3(1, -1, 1);
             floor.gameObject.AddComponent<BoxCollider>();
+            floor.parent = root;
 
             MeshDescription ceilingDescription = MeshGenerator.CreatePlaneDescription(dungeon.Settings);
             Transform ceiling = MeshGenerator.GenerateMesh(ceilingDescription, dungeon.Settings.ceilingMaterial);
             ceiling.position = new Vector3(0, 3, 0);
+            ceiling.parent = root;
 
             if (dungeon.TryGetRandomRoomCenter(out Geometry.Vertex randomRoomCenter))
             {
@@ -56,9 +64,7 @@ namespace Assets.Scripts.Generation
         private static void CreateWall(float x, float y, float angle)
         {
             if (root == null)
-            {
                 root = new GameObject("Dungeon").transform;
-            }
 
             float scale = Mathf.Abs(angle) < 1 ? 1 : 1.415f;
 
@@ -104,9 +110,7 @@ namespace Assets.Scripts.Generation
         private static Light CreateLight(int x, int y)
         {
             if (root == null)
-            {
                 root = new GameObject("Dungeon").transform;
-            }
 
             Transform go = new GameObject("Light").transform;
             go.position = new Vector3(x, 1.5f, y);

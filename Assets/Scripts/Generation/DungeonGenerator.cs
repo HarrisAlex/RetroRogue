@@ -405,12 +405,14 @@ namespace Assets.Scripts.Generation
                 Node node = open[0];
 
                 // Get cheapest next node
+                Node current;
                 for (int i = 1; i < open.Count; i++)
                 {
-                    if (open[i].FCost < node.FCost || Approximately(open[i].FCost, node.FCost))
+                    current = open[i];
+                    if (current.FCost < node.FCost || Approximately(current.FCost, node.FCost))
                     {
-                        if (open[i].hCost < node.hCost)
-                            node = open[i];
+                        if (current.hCost < node.hCost)
+                            node = current;
                     }
                 }
 
@@ -431,14 +433,16 @@ namespace Assets.Scripts.Generation
 
                     float cost = node.gCost + Distance(node.position, neighbor.position);
 
+                    bool openContainsNeighbor = open.Contains(neighbor);
+
                     // Adds each neighbor cheaper than current node to open set
-                    if (cost < neighbor.gCost || !open.Contains(neighbor))
+                    if (cost < neighbor.gCost || !openContainsNeighbor)
                     {
                         neighbor.gCost = cost;
                         neighbor.hCost = Distance(neighbor.position, endNode.position);
                         neighbor.parent = node;
 
-                        if (!open.Contains(neighbor))
+                        if (!openContainsNeighbor)
                             open.Add(neighbor);
                     }
                 }
