@@ -17,6 +17,11 @@ namespace Assets.Scripts.Generation
                 this.x = x;
                 this.y = y;
             }
+
+            public Coordinate ToCoordinate()
+            {
+                return new Coordinate((int)x, (int)y);
+            }
         }
 
         public struct Coordinate
@@ -28,6 +33,11 @@ namespace Assets.Scripts.Generation
             {
                 this.x = x;
                 this.y = y;
+            }
+
+            public Vertex ToVertex()
+            {
+                return new Vertex(x, y);
             }
         }
 

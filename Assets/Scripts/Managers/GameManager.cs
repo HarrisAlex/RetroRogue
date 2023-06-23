@@ -14,6 +14,8 @@ public class GameManager : MonoBehaviour
     public event Action PlayerDeath;
     private Vector3 playerSpawnPosition = Vector3.zero;
 
+    DungeonGenerator dungeon;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -23,7 +25,7 @@ public class GameManager : MonoBehaviour
 
         PlayerDeath += GameEnd;
 
-        StartGame();
+        //StartGame();
     }
 
     void StartGame()
@@ -33,7 +35,7 @@ public class GameManager : MonoBehaviour
         Cursor.visible = false;
 
         // Generate dungeon
-        DungeonGenerator dungeon = new DungeonGenerator(dungeonSettings);
+        dungeon = new DungeonGenerator(dungeonSettings);
         dungeon.Generate((int)DateTime.Now.Ticks);
 
         // Render dungeon
@@ -49,6 +51,14 @@ public class GameManager : MonoBehaviour
     void Update()
     {
         if (isPaused) return;
+
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            dungeon = new DungeonGenerator(dungeonSettings);
+            dungeon.Generate((int)DateTime.Now.Ticks);
+
+            DungeonRenderer.RenderDungeon(dungeon);
+        }
     }
 
     private void GameEnd()
