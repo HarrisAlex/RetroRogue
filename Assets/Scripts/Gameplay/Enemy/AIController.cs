@@ -21,14 +21,7 @@ public class AIController : MonoBehaviour
     public BehaviorState State { get; private set; }
 
     // Navigation
-    private Vector3 Destination
-    {
-        get { return Destination; }
-        set
-        {
-            
-        }
-    }
+    private Vector3 destination = Vector3.negativeInfinity;
 
     private void Awake()
     {
@@ -39,6 +32,9 @@ public class AIController : MonoBehaviour
 
     private void Update()
     {
+        if (destination == Vector3.negativeInfinity) return;
 
+        movementController.SetInput(destination.x - transform.position.x, destination.z - transform.position.z);
+        lookController.SetInput(Vector3.Angle(transform.forward, (destination - transform.position).normalized), 0);
     }
 }

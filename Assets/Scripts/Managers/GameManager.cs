@@ -11,32 +11,32 @@ public class GameManager : MonoBehaviour
     // Player
     public GameObject playerPrefab;
     public static Transform player { get; private set; }
-    public event Action PlayerDeath;
     private Vector3 playerSpawnPosition = Vector3.zero;
 
-    DungeonGenerator dungeon;
+    DungeonGenerator dungeonGenerator;
+    private Dungeon dungeon;
 
     // Start is called before the first frame update
-    void Start()
+    private void Awake()
     {
         // Initialize cursor
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
-        PlayerDeath += GameEnd;
+        Player.PlayerDeath += GameEnd;
 
         StartGame();
     }
 
-    void StartGame()
+    private void StartGame()
     {
         // Initialize cursor
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
         // Generate dungeon
-        dungeon = new DungeonGenerator(dungeonSettings);
-        dungeon.Generate((int)DateTime.Now.Ticks);
+        dungeonGenerator = new DungeonGenerator(dungeonSettings);
+        dungeon = dungeonGenerator.Generate((int)DateTime.Now.Ticks);
 
         // Render dungeon
         playerSpawnPosition = DungeonRenderer.RenderDungeon(dungeon);
@@ -48,7 +48,7 @@ public class GameManager : MonoBehaviour
         LightManager.Initialize();
     }
 
-    void Update()
+    private void Update()
     {
         if (isPaused) return;
     }

@@ -52,11 +52,25 @@ public class MovementController : MonoBehaviour
 
     private void Update()
     {
+        // Cache variables
         speed = Mathf.Lerp(speed, TargetSpeed, Time.smoothDeltaTime * sprintTransition);
+        isGrounded = Physics.CheckSphere(transform.position + new Vector3(0, controller.radius - 0.05f, 0), 
+            controller.radius, ~LayerMask.GetMask("Character"));
 
-        ApplyGravity();
+        // Add gravity
+        if (isGrounded)
+            velocity.y = 0;
+        else
+            velocity.y -= 9.8f * Time.smoothDeltaTime;
 
-        LocalizeVelocity();
+        // Localize direction of velocity
+        float tempY = velocity.y;
+        velocity.y = 0;
+        velocity = transform.TransformDirection(velocity);
+        velocity.y = tempY;
+
+        // Clamp velocity
+        velocity = Vector3.ClampMagnitude(velocity, speed);
 
         controller.Move(velocity);
     }
@@ -85,32 +99,5 @@ public class MovementController : MonoBehaviour
     public void Jump()
     {
         velocity.y = jumpForce * Time.smoothDeltaTime;
-    }
-
-    private bool IsGrounded()
-    {
-        return Physics.CheckSphere(transform.position + new Vector3(0, controller.radius - 0.05f, 0), controller.radius, ~LayerMask.GetMask("Character"));
-    }
-
-    // Make velocity local to direction player is facing
-    private void LocalizeVelocity()
-    {
-        float tempY = velocity.y;
-
-        velocity.y = 0;
-        velocity = transform.TransformDirection(velocity);
-        velocity.y = tempY;
-    }
-
-    // Apply gravity if player is not grounded
-    private void ApplyGravity()
-    {
-        // Cache result of IsGrounded()
-        isGrounded = IsGrounded();
-
-        if (isGrounded)
-            velocity.y = 0;
-        else
-            velocity.y -= 9.8f * Time.smoothDeltaTime;
     }
 }

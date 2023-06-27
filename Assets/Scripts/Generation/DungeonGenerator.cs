@@ -17,7 +17,38 @@ namespace Assets.Scripts.Generation
         BottomRightCorner,
     }
 
-    class Room
+    public struct Dungeon
+    {
+        public TileType[,] grid;
+        public NavigationTree navigationTree;
+        public GenerationSettings settings;
+
+        private readonly int seed;
+
+        public Dungeon(TileType[,] grid, List<Room> rooms, HashSet<Edge> edges, GenerationSettings settings, int seed)
+        {
+            this.grid = grid;
+
+            navigationTree = new NavigationTree(grid, rooms, new(edges));
+
+            this.settings = settings;
+            this.seed = seed;
+        }
+
+
+        public bool TryGetRandomRoomCenter(out Vertex vertex)
+        {
+            vertex = Vertex.Zero;
+            if (navigationTree == null) return false;
+            if (navigationTree.Edges == null) return false;
+            if (navigationTree.Edges.Count < 1) return false;
+
+            vertex = navigationTree.Edges[new Random(seed).Next(0, navigationTree.Edges.Count - 1)].u;
+            return true;
+        }
+    }
+
+    public class Room
     {
         public int xPosition;
         public int yPosition;
@@ -55,6 +86,12 @@ namespace Assets.Scripts.Generation
                 || (room1.yPosition - spacing >= (room2.yPosition + room2.height + spacing))
                 || ((room1.yPosition + room1.height + spacing) <= room2.yPosition - spacing));
         }
+
+        public bool ContainsPoint(Vertex vertex)
+        {
+            return (vertex.x >= xPosition && vertex.x <= xPosition + width
+                && vertex.y >= yPosition && vertex.y <= yPosition + height);
+        }
     }
 
     class Node
@@ -83,7 +120,7 @@ namespace Assets.Scripts.Generation
         private Random random;
 
         private TileType[,] grid;
-        private List<Room> Rooms { get; set; }
+        private List<Room> rooms;
         private List<Edge> edges;
         private HashSet<Edge> selectedEdges;
 
@@ -95,12 +132,12 @@ namespace Assets.Scripts.Generation
             Settings = settings;
         }
 
-        public TileType[,] Generate(int seed)
+        public Dungeon Generate(int seed)
         {
             // Initialization of variables
             random = new Random(seed);
             grid = new TileType[Settings.gridWidth, Settings.gridHeight];
-            Rooms = new List<Room>();
+            rooms = new List<Room>();
 
 
             // Initialize grid
@@ -114,7 +151,7 @@ namespace Assets.Scripts.Generation
 
                 if (TryCreateRoom(out newRoom))
                 {
-                    Rooms.Add(newRoom);
+                    rooms.Add(newRoom);
 
                     FillArea(newRoom.xPosition, newRoom.yPosition,
                         newRoom.xPosition + newRoom.width, newRoom.yPosition + newRoom.height, TileType.RoomFloor);
@@ -229,17 +266,16 @@ namespace Assets.Scripts.Generation
 
 
             // Add lights
-            foreach (Room room in Rooms)
+            foreach (Room room in rooms)
             {
                 room.lights = new List<Vertex>();
 
                 if (random.Next(0, 1) == 0)
-                {
                     room.lights.Add(room.GetCenter());
-                }
             }
 
-            return grid;
+            // Create dungeon struct
+            return new(grid, rooms, selectedEdges, Settings, seed);
         }
 
         private bool TryCreateRoom(out Room newRoom)
@@ -267,7 +303,7 @@ namespace Assets.Scripts.Generation
                 }
 
                 // Check for intersection with other rooms
-                foreach (Room room in Rooms)
+                foreach (Room room in rooms)
                 {
                     if (Room.RoomsIntersect(room, newRoom, 0))
                     {
@@ -287,7 +323,7 @@ namespace Assets.Scripts.Generation
             List<Vertex> vertices = new();
 
             // Create midpoint for center of each room
-            foreach (Room room in Rooms)
+            foreach (Room room in rooms)
             {
                 vertices.Add(room.GetCenter());
             }
@@ -713,13 +749,13 @@ namespace Assets.Scripts.Generation
         {
             center = new Vertex(0, 0);
 
-            if (Rooms == null)
+            if (rooms == null)
                 return false;
 
-            if (Rooms.Count < 1)
+            if (rooms.Count < 1)
                 return false;
 
-            center = Rooms[random.Next(0, Rooms.Count - 1)].GetCenter();
+            center = rooms[random.Next(0, rooms.Count - 1)].GetCenter();
             return true;
         }
     }

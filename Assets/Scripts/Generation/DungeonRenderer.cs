@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace Assets.Scripts.Generation
 {
@@ -7,7 +6,7 @@ namespace Assets.Scripts.Generation
     {
         private static Transform root;
 
-        public static Vector3 RenderDungeon(DungeonGenerator dungeon)
+        public static Vector3 RenderDungeon(Dungeon dungeon)
         {
             if (root != null)
             {
@@ -15,11 +14,11 @@ namespace Assets.Scripts.Generation
                 root = null;
             }
 
-            for (int x = 0; x < dungeon.Settings.gridWidth; x++)
+            for (int x = 0; x < dungeon.settings.gridWidth; x++)
             {
-                for (int y = 0; y < dungeon.Settings.gridHeight; y++)
+                for (int y = 0; y < dungeon.settings.gridHeight; y++)
                 {
-                    switch (dungeon.GetCoordinate(x, y))
+                    switch (dungeon.grid[x, y])
                     {
                         case TileType.Wall:
                             CreateWall(x, y, 0);
@@ -40,25 +39,21 @@ namespace Assets.Scripts.Generation
                 }
             }
 
-            MeshDescription floorDescription = MeshGenerator.CreatePlaneDescription(dungeon.Settings);
-            Transform floor = MeshGenerator.GenerateMesh(floorDescription, dungeon.Settings.floorMaterial);
+            MeshDescription floorDescription = MeshGenerator.CreatePlaneDescription(dungeon.settings);
+            Transform floor = MeshGenerator.GenerateMesh(floorDescription, dungeon.settings.floorMaterial);
             floor.localScale = new Vector3(1, -1, 1);
             floor.gameObject.AddComponent<BoxCollider>();
             floor.parent = root;
 
-            MeshDescription ceilingDescription = MeshGenerator.CreatePlaneDescription(dungeon.Settings);
-            Transform ceiling = MeshGenerator.GenerateMesh(ceilingDescription, dungeon.Settings.ceilingMaterial);
+            MeshDescription ceilingDescription = MeshGenerator.CreatePlaneDescription(dungeon.settings);
+            Transform ceiling = MeshGenerator.GenerateMesh(ceilingDescription, dungeon.settings.ceilingMaterial);
             ceiling.position = new Vector3(0, 3, 0);
             ceiling.parent = root;
 
             if (dungeon.TryGetRandomRoomCenter(out Geometry.Vertex randomRoomCenter))
-            {
                 return new Vector3(randomRoomCenter.x, 0, randomRoomCenter.y);
-            }
             else
-            {
                 return Vector3.zero;
-            }
         }
 
         private static void CreateWall(float x, float y, float angle)

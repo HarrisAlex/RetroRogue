@@ -22,6 +22,16 @@ namespace Assets.Scripts.Generation
             {
                 return new Coordinate((int)x, (int)y);
             }
+
+            public static bool operator ==(Vertex a, Vertex b)
+            {
+                return Approximately(a.x, b.x) && Approximately(a.y, b.y);
+            }
+
+            public static bool operator !=(Vertex a, Vertex b)
+            {
+                return !Approximately(a.x, b.x) || !Approximately(a.y, b.y);
+            }
         }
 
         public struct Coordinate

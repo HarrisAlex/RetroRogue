@@ -1,14 +1,11 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
 using System;
 
 public class Player : Character
 {
-    public event Action OnDie;
+    public static event Action PlayerDeath;
 
     protected override void Die()
     {
-        OnDie.Invoke();
+        PlayerDeath.Invoke();
     }
 }
