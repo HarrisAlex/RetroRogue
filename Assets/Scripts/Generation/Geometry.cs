@@ -10,7 +10,8 @@ namespace Assets.Scripts.Generation
             public float x;
             public float y;
 
-            public static Vertex Zero { get { return new Vertex(0, 0); } }
+            public static Vertex Zero { get => new(0, 0); }
+            public static Vertex NegativeInfinity { get => new(float.MinValue, float.MinValue); }
 
             public Vertex(float x, float y)
             {
@@ -23,14 +24,28 @@ namespace Assets.Scripts.Generation
                 return new Coordinate((int)x, (int)y);
             }
 
+            public override bool Equals(object obj)
+            {
+                if (obj == null || !GetType().Equals(obj.GetType()))
+                    return false;
+
+                Vertex vertex = (Vertex)obj;
+                return vertex.x == x && vertex.y == y;
+            }
+
+            public override int GetHashCode()
+            {
+                return base.GetHashCode();
+            }
+
             public static bool operator ==(Vertex a, Vertex b)
             {
-                return Approximately(a.x, b.x) && Approximately(a.y, b.y);
+                return Approximately(a, b);
             }
 
             public static bool operator !=(Vertex a, Vertex b)
             {
-                return !Approximately(a.x, b.x) || !Approximately(a.y, b.y);
+                return !Approximately(a, b);
             }
         }
 

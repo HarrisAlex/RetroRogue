@@ -46,6 +46,14 @@ public class GameManager : MonoBehaviour
         LightManager.AddLight(player.GetChild(1).GetComponent<Light>());
 
         LightManager.Initialize();
+
+        dungeon.TryGetRandomRoomCenter(out Geometry.Vertex start);
+        dungeon.TryGetRandomRoomCenter(out Geometry.Vertex end);
+
+        System.Collections.Generic.List<Geometry.Vertex> path = dungeon.navigationTree.FindPath(start, end);
+
+        foreach (Geometry.Vertex v in path)
+            Debug.Log("Next node is: " + v.x + ", " + v.y);
     }
 
     private void Update()

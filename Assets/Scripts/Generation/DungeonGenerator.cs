@@ -25,11 +25,11 @@ namespace Assets.Scripts.Generation
 
         private readonly int seed;
 
-        public Dungeon(TileType[,] grid, List<Room> rooms, HashSet<Edge> edges, GenerationSettings settings, int seed)
+        public Dungeon(TileType[,] grid, HashSet<Edge> edges, GenerationSettings settings, int seed)
         {
             this.grid = grid;
 
-            navigationTree = new NavigationTree(grid, rooms, new(edges));
+            navigationTree = new NavigationTree(grid, new(edges));
 
             this.settings = settings;
             this.seed = seed;
@@ -38,12 +38,12 @@ namespace Assets.Scripts.Generation
 
         public bool TryGetRandomRoomCenter(out Vertex vertex)
         {
-            vertex = Vertex.Zero;
+            vertex = Vertex.NegativeInfinity;
             if (navigationTree == null) return false;
-            if (navigationTree.Edges == null) return false;
-            if (navigationTree.Edges.Count < 1) return false;
+            if (navigationTree.edges == null) return false;
+            if (navigationTree.edges.Count < 1) return false;
 
-            vertex = navigationTree.Edges[new Random(seed).Next(0, navigationTree.Edges.Count - 1)].u;
+            vertex = navigationTree.edges[new Random(seed).Next(0, navigationTree.edges.Count - 1)].u;
             return true;
         }
     }
@@ -275,7 +275,7 @@ namespace Assets.Scripts.Generation
             }
 
             // Create dungeon struct
-            return new(grid, rooms, selectedEdges, Settings, seed);
+            return new(grid, selectedEdges, Settings, seed);
         }
 
         private bool TryCreateRoom(out Room newRoom)
