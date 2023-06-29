@@ -1,5 +1,5 @@
 ﻿using UnityEngine;
-using static Assets.Scripts.Generation.Geometry;
+using static Assets.Scripts.Generation.DungeonGeneration;
 
 namespace Assets.Scripts.Generation
 {

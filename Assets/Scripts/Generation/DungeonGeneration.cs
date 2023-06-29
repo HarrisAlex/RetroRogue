@@ -1,10 +1,12 @@
 ﻿using System;
-using UnityEngine;
 
 namespace Assets.Scripts.Generation
 {
-    public class Geometry
+    public class DungeonGeneration
     {
+        // ----------------------------
+        //      Classes & structs      
+        // ----------------------------
         public struct Vertex
         {
             public float x;
@@ -139,6 +141,10 @@ namespace Assets.Scripts.Generation
             }
         }
 
+        // ----------------------------
+        //          Functions          
+        // ----------------------------
+
         public static float Distance(Coordinate c1, Coordinate c2)
         {
             return MathF.Sqrt(MathF.Pow(c1.x - c2.x, 2) + MathF.Pow(c1.y - c2.y, 2));
@@ -162,6 +168,17 @@ namespace Assets.Scripts.Generation
         public static bool Approximately(Vertex a, Vertex b)
         {
             return Approximately(a.x, b.x) && Approximately(a.y, b.y);
+        }
+
+        public static void IterateArea(int x1, int y1, int x2, int y2, Action<int, int> function)
+        {
+            for (int x = x1; x <= x2; x++)
+            {
+                for (int y = y1; y <= y2; y++)
+                {
+                    function(x, y);
+                }
+            }
         }
     }
 }

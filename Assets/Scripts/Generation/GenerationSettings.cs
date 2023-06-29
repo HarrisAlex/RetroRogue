@@ -16,8 +16,5 @@ namespace Assets.Scripts.Generation
         public int maxRoomAttempts = 5;
         public int hallwayExpansion = 1;
         public float extraHallwayGenerationChance = 0;
-        public Material floorMaterial;
-        public Material ceilingMaterial;
-        public Material wallMaterial;
     }
 }

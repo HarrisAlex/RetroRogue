@@ -322,6 +322,7 @@ GameObject:
   - component: {fileID: 838776637}
   - component: {fileID: 838776638}
   - component: {fileID: 838776639}
+  - component: {fileID: 838776640}
   m_Layer: 0
   m_Name: Managers
   m_TagString: Untagged
@@ -383,6 +384,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maximumDistance: 30
+--- !u!114 &838776640
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 838776635}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b6f730aece86d944d94007c8bb8c5381, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  floorMaterial: {fileID: 2100000, guid: c06c2ce82be9f1d44abf50a55ed09bf4, type: 2}
+  ceilingMaterial: {fileID: 2100000, guid: c06c2ce82be9f1d44abf50a55ed09bf4, type: 2}
+  wallMaterial: {fileID: 2100000, guid: c06c2ce82be9f1d44abf50a55ed09bf4, type: 2}
 --- !u!1 &1069203003
 GameObject:
   m_ObjectHideFlags: 0

@@ -2,23 +2,30 @@
 
 namespace Assets.Scripts.Generation
 {
-    public class DungeonRenderer
+    public class DungeonRenderer : MonoBehaviour
     {
+        public Material floorMaterial;
+        public Material ceilingMaterial;
+        public Material wallMaterial;
+
         private static Transform root;
 
-        public static Vector3 RenderDungeon(Dungeon dungeon)
+        public Vector3 RenderDungeon(Dungeon dungeon)
         {
             if (root != null)
             {
-                Object.Destroy(root.gameObject);
+                Destroy(root.gameObject);
                 root = null;
             }
 
-            for (int x = 0; x < dungeon.settings.gridWidth; x++)
+            int width = dungeon.GetWidth();
+            int height = dungeon.GetHeight();
+
+            for (int x = 0; x < width; x++)
             {
-                for (int y = 0; y < dungeon.settings.gridHeight; y++)
+                for (int y = 0; y < height; y++)
                 {
-                    switch (dungeon.grid[x, y])
+                    switch (dungeon.GetTile(x, y))
                     {
                         case TileType.Wall:
                             CreateWall(x, y, 0);
@@ -39,24 +46,19 @@ namespace Assets.Scripts.Generation
                 }
             }
 
-            MeshDescription floorDescription = MeshGenerator.CreatePlaneDescription(dungeon.settings);
-            Transform floor = MeshGenerator.GenerateMesh(floorDescription, dungeon.settings.floorMaterial);
+            Transform floor = CreatePlane(width, height, floorMaterial, 1);
             floor.localScale = new Vector3(1, -1, 1);
             floor.gameObject.AddComponent<BoxCollider>();
             floor.parent = root;
 
-            MeshDescription ceilingDescription = MeshGenerator.CreatePlaneDescription(dungeon.settings);
-            Transform ceiling = MeshGenerator.GenerateMesh(ceilingDescription, dungeon.settings.ceilingMaterial);
+            Transform ceiling = CreatePlane(width, height, ceilingMaterial, 1);
             ceiling.position = new Vector3(0, 3, 0);
             ceiling.parent = root;
 
-            if (dungeon.TryGetRandomRoomCenter(out Geometry.Vertex randomRoomCenter))
-                return new Vector3(randomRoomCenter.x, 0, randomRoomCenter.y);
-            else
-                return Vector3.zero;
+            return new Vector3(dungeon.spawn.x, 0, dungeon.spawn.y);
         }
 
-        private static void CreateWall(float x, float y, float angle)
+        private void CreateWall(float x, float y, float angle)
         {
             if (root == null)
                 root = new GameObject("Dungeon").transform;
@@ -70,7 +72,7 @@ namespace Assets.Scripts.Generation
             go.parent = root;
         }
 
-        private static void CreateCorner(int x, int y, TileType cornerType)
+        private void CreateCorner(int x, int y, TileType cornerType)
         {
             float angle = 0;
             float xPos = x, yPos = y;
@@ -102,7 +104,7 @@ namespace Assets.Scripts.Generation
             CreateWall(xPos, yPos, angle);
         }
 
-        private static Light CreateLight(int x, int y)
+        private Light CreateLight(int x, int y)
         {
             if (root == null)
                 root = new GameObject("Dungeon").transform;
@@ -117,6 +119,75 @@ namespace Assets.Scripts.Generation
             light.intensity = 3;
 
             return light;
+        }
+
+        // Mesh generation
+        private struct MeshDescription
+        {
+            public string name;
+            public Vector3[] vertices;
+            public int[] triangles;
+            public Vector2[] uvs;
+        }
+
+        private int Square(int number)
+        {
+            return number * number;
+        }
+
+        private Transform CreatePlane(int width, int height, Material material, int subvision = 0)
+        {
+            MeshDescription description = new MeshDescription();
+
+            description.name = "Floor";
+            description.vertices = new Vector3[Square(subvision + 2)];
+            description.triangles = new int[2 * Square(subvision + 1) * 3];
+            description.uvs = new Vector2[description.vertices.Length];
+
+            int vertexIterations = (description.vertices.Length / 2) - 1;
+
+            for (int x = 0, i = 0; x < vertexIterations; x++)
+            {
+                for (int y = 0; y < vertexIterations; y++, i++)
+                {
+                    description.vertices[i] = new Vector3(Mathf.Lerp(0, width, x), 0, Mathf.Lerp(0, height, y));
+                    description.uvs[i] = new Vector2(x, y);
+                }
+            }
+
+            int triangleIterations = subvision + 1;
+
+            for (int ti = 0, vi = 0, y = 0; y < triangleIterations; y++, vi++)
+            {
+                for (int x = 0; x < triangleIterations; x++, ti += 6, vi++)
+                {
+                    description.triangles[ti] = vi;
+                    description.triangles[ti + 3] = description.triangles[ti + 2] = vi + 1;
+                    description.triangles[ti + 4] = description.triangles[ti + 1] = vi + triangleIterations + 1;
+                    description.triangles[ti + 5] = vi + triangleIterations + 2;
+                }
+            }
+
+            return GenerateMesh(description, material);
+        }
+
+        private Transform GenerateMesh(MeshDescription description, Material material)
+        {
+            Mesh mesh = new Mesh();
+            GameObject go = new GameObject();
+            mesh.name = go.name = description.name;
+
+            go.AddComponent<MeshFilter>().mesh = mesh;
+            MeshRenderer meshRenderer = go.AddComponent<MeshRenderer>();
+            meshRenderer.material = material;
+
+            mesh.vertices = description.vertices;
+            mesh.triangles = description.triangles;
+            mesh.RecalculateNormals();
+            mesh.RecalculateTangents();
+            mesh.uv = description.uvs;
+
+            return go.transform;
         }
     }
 }

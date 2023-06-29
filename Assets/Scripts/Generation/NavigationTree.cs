@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using static Assets.Scripts.Generation.Geometry;
+using static Assets.Scripts.Generation.DungeonGeneration;
 
 namespace Assets.Scripts.Generation
 {
@@ -12,53 +12,6 @@ namespace Assets.Scripts.Generation
         private readonly List<Vertex> vertices;
 
         private readonly List<Node> nodes;
-
-        private class Node
-        {
-            public struct Connection
-            {
-                public Node node;
-                public float distance;
-            }
-
-            public readonly Vertex position;
-            public readonly List<Connection> connections;
-
-            public float distance;
-            public Node previous;
-
-            public Node(Vertex position, List<Connection> connections)
-            {
-                this.position = position;
-                this.connections = connections;
-
-                distance = float.MaxValue;
-                previous = null;
-            }
-
-            /// <summary>
-            /// Sets distance to node if less than current shortest distance.
-            /// </summary>
-            /// <param name="distance">The distance to be set.</param>
-            /// <returns>Returns whether distance was shorter than original distance.</returns>
-            public bool SetDistance(float distance, Node previous)
-            {
-                if (this.distance > distance)
-                {
-                    this.distance = distance;
-                    this.previous = previous;
-
-                    return true;
-                }
-
-                return false;
-            }
-
-            public void ResetDistance()
-            {
-                distance = float.MaxValue;
-            }
-        }
 
         public NavigationTree(TileType[,] grid, List<Edge> edges)
         {
@@ -76,9 +29,10 @@ namespace Assets.Scripts.Generation
 
             // Create a new node for each vertex
             foreach (Vertex vertex in vertices)
-            {
-                nodes.Add(new(vertex, FindConnections(vertex)));
-            }
+                nodes.Add(new(vertex.x, vertex.y));
+
+            foreach (Node node in nodes)
+                node.neighbors = FindNeigbors(node.position);
 
             width = grid.GetLength(0);
             height = grid.GetLength(1);
@@ -105,44 +59,70 @@ namespace Assets.Scripts.Generation
             if (!TryFindNodeAtPoint(FindNearestVertex(start), out Node startNode)) return null;
             if (!TryFindNodeAtPoint(end, out Node endNode)) return null;
 
-            // Create open list for Dijkstra's and set distances to infinity
-            List<Node> open = new(nodes);
-            nodes.ForEach((Node n) => n.ResetDistance());
+            // Create open list for A*
+            List<Node> open = new();
+            open.Add(startNode);
 
-            // Initialize start node and current
-            startNode.distance = 0;
-            Node current = startNode;
+            HashSet<Node> closed = new();
 
-            // Iterate through all nodes
             while (open.Count > 0)
             {
-                // Set lowest distance for each connecting node
-                current.connections.ForEach((Node.Connection c) =>
-                    c.node.SetDistance(Distance(current.position, c.node.position), current));
+                Node current = open[0];
+
+                Node closest;
+                for (int i = 1; i < open.Count; i++)
+                {
+                    closest = open[i];
+                    if (closest.FCost < current.FCost || Approximately(closest.FCost, current.FCost))
+                    {
+                        if (closest.hCost < current.hCost)
+                            current = closest;
+                    }
+                }
 
                 open.Remove(current);
+                closed.Add(current);
 
-                if (open.Count > 0)
-                    current = open[0];
+                // Return if path has been found
+                if (current == endNode)
+                {
+                    List<Vertex> path = new();
+                    Node tmp = endNode;
+
+                    while (tmp != startNode)
+                    {
+                        path.Add(tmp.position);
+                        tmp = tmp.parent;
+                    }
+
+                    path.Reverse();
+
+                    return path;
+                }
+
+                // Iterate through neighbors
+                foreach (Node neighbor in current.neighbors)
+                {
+                    if (closed.Contains(neighbor)) continue;
+
+                    float cost = current.gCost + Distance(current.position, neighbor.position);
+
+                    bool openContainsNeighbor = open.Contains(neighbor);
+
+                    // Adds each neighbor cheaper than current node to open set
+                    if (cost < neighbor.gCost || !openContainsNeighbor)
+                    {
+                        neighbor.gCost = cost;
+                        neighbor.hCost = Distance(neighbor.position, endNode.position);
+                        neighbor.parent = current;
+
+                        if (!openContainsNeighbor)
+                            open.Add(neighbor);
+                    }
+                }
             }
 
-            // Build path
-            List<Node> nodePath = new();
-            current = endNode;
-
-            while (current != null)
-            {
-                nodePath.Add(current);
-                current = current.previous;
-            }
-
-            nodePath.Reverse();
-
-            // Convert path to List<Vertex>
-            List<Vertex> path = new();
-            nodePath.ForEach((Node n) => path.Add(n.position));
-
-            return path;
+            return new();
         }
 
         /// <summary>
@@ -191,45 +171,32 @@ namespace Assets.Scripts.Generation
         /// </summary>
         /// <param name="vertex">The vertex from which to find connections.</param>
         /// <returns>Returns a List of Node.Connection structs.</returns>
-        private List<Node.Connection> FindConnections(Vertex vertex)
+        private List<Node> FindNeigbors(Vertex vertex)
         {
-            if (vertex == Vertex.NegativeInfinity) return null;
-            if (edges == null) return null;
+            List<Node> neighbors = new();
 
-            List<Node.Connection> connections = new();
+            if (vertex == Vertex.NegativeInfinity) return neighbors;
+            if (edges == null) return neighbors;
 
             // Get edges that include vertex and add other vertex as connection,
             // creating a new node for that other vertex if none exists
-            Node.Connection connection;
+            Vertex tmpVertex;
             foreach (Edge edge in edges)
             {
+                tmpVertex = Vertex.NegativeInfinity;
+
                 if (edge.u == vertex)
-                {
-                    connection = new();
-                    connection.distance = Distance(vertex, edge.v);
-
-                    if (TryFindNodeAtPoint(edge.v, out Node node))
-                        connection.node = node;
-                    else
-                        connection.node = new Node(edge.v, new());
-
-                    connections.Add(connection);
-                }
+                    tmpVertex = edge.v;
                 else if (edge.v == vertex)
+                    tmpVertex = edge.u;
+
+                if (TryFindNodeAtPoint(tmpVertex, out Node node))
                 {
-                    connection = new();
-                    connection.distance = Distance(vertex, edge.u);
-
-                    if (TryFindNodeAtPoint(edge.u, out Node node))
-                        connection.node = node;
-                    else
-                        connection.node = new Node(edge.u, new());
-
-                    connections.Add(connection);
+                    neighbors.Add(node);
                 }
             }
 
-            return connections;
+            return neighbors;
         }
 
         /// <summary>

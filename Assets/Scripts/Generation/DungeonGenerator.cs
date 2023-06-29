@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using static Assets.Scripts.Generation.Geometry;
+using static Assets.Scripts.Generation.DungeonGeneration;
 using Random = System.Random;
 
 namespace Assets.Scripts.Generation
@@ -17,34 +17,54 @@ namespace Assets.Scripts.Generation
         BottomRightCorner,
     }
 
-    public struct Dungeon
+    public readonly struct Dungeon
     {
-        public TileType[,] grid;
-        public NavigationTree navigationTree;
-        public GenerationSettings settings;
+        public readonly Vertex spawn;
+        public readonly Navigation navigation;
 
-        private readonly int seed;
+        private readonly TileType[,] grid;
+        private readonly GenerationSettings settings;
 
-        public Dungeon(TileType[,] grid, HashSet<Edge> edges, GenerationSettings settings, int seed)
+        public Dungeon(TileType[,] grid, HashSet<Edge> edges, GenerationSettings settings, Random random)
         {
             this.grid = grid;
 
-            navigationTree = new NavigationTree(grid, new(edges));
+            List<Vertex> vertices = new();
+            foreach (Edge edge in edges)
+            {
+                if (!vertices.Contains(edge.u))
+                    vertices.Add(edge.u);
+                if (!vertices.Contains(edge.v))
+                    vertices.Add(edge.v);
+            }
+
+            spawn = vertices[random.Next(0, vertices.Count - 1)];
+
+            // Create a new node for each vertex
+            List<Node> nodes = new();
+            foreach (Vertex vertex in vertices)
+                nodes.Add(new(vertex.x, vertex.y));
+
+            navigation = new Navigation(nodes);
 
             this.settings = settings;
-            this.seed = seed;
         }
 
-
-        public bool TryGetRandomRoomCenter(out Vertex vertex)
+        public TileType GetTile(int x, int y)
         {
-            vertex = Vertex.NegativeInfinity;
-            if (navigationTree == null) return false;
-            if (navigationTree.edges == null) return false;
-            if (navigationTree.edges.Count < 1) return false;
+            if (x < 0 || x >= grid.GetLength(0) || y < 0 || y >= grid.GetLength(1)) return TileType.Void;
 
-            vertex = navigationTree.edges[new Random(seed).Next(0, navigationTree.edges.Count - 1)].u;
-            return true;
+            return grid[x, y];
+        }
+
+        public int GetWidth()
+        {
+            return settings.gridWidth;
+        }
+
+        public int GetHeight()
+        {
+            return settings.gridHeight;
         }
     }
 
@@ -94,24 +114,6 @@ namespace Assets.Scripts.Generation
         }
     }
 
-    class Node
-    {
-        public Coordinate position;
-        public Node parent;
-        public float gCost;
-        public float hCost;
-
-        public float FCost
-        {
-            get { return gCost + hCost; }
-        }
-
-        public Node(int x, int y)
-        {
-            position = new Coordinate(x, y);
-        }
-    }
-
     public class DungeonGenerator
     {
         public GenerationSettings Settings { get; private set; }
@@ -123,9 +125,6 @@ namespace Assets.Scripts.Generation
         private List<Room> rooms;
         private List<Edge> edges;
         private HashSet<Edge> selectedEdges;
-
-        // Pathfinding
-        private Node[,] allNodes;
 
         public DungeonGenerator(GenerationSettings settings)
         {
@@ -225,34 +224,38 @@ namespace Assets.Scripts.Generation
                     selectedEdges.Add(edge);
             }
 
-
             // Initialize nodes for pathfinding hallways
-            allNodes = new Node[Settings.gridWidth, Settings.gridHeight];
+            Node[,] nodes = new Node[Settings.gridWidth, Settings.gridHeight];
             IterateArea(0, 0, Settings.gridWidth - 1, Settings.gridHeight - 1, (int x, int y) =>
             {
                 if (TryGetCoordinate(x, y, out TileType type))
-                    allNodes[x, y] = new Node(x, y);
+                    nodes[x, y] = new(x, y);
                 else
-                    allNodes[x, y] = null;
+                    nodes[x, y] = null;
             });
+
+            foreach (Node node in nodes)
+                node.neighbors = FindNeighbors(nodes, node);
+
+            Navigation navigation = new Navigation(nodes);
 
             // Pathfind and fill hallways
             foreach (Edge edge in selectedEdges)
             {
-                if (TryFindPath(edge.u, edge.v, out List<Coordinate> currentHallway))
+                List<Vertex> path = navigation.FindPath(edge.u, edge.v);
+
+                if (path == null) continue;
+
+                foreach (Vertex vertex in path)
                 {
-                    foreach (Coordinate coordinate in currentHallway)
-                    {
-                        FillArea(coordinate.x - Settings.hallwayExpansion,
-                            coordinate.y - Settings.hallwayExpansion,
-                            coordinate.x + Settings.hallwayExpansion,
-                            coordinate.y + Settings.hallwayExpansion,
-                            TileType.HallwayFloor, IsVoid
-                            );
-                    }
+                    FillArea((int)vertex.x - Settings.hallwayExpansion,
+                        (int)vertex.y - Settings.hallwayExpansion,
+                        (int)vertex.x + Settings.hallwayExpansion,
+                        (int)vertex.y + Settings.hallwayExpansion,
+                        TileType.HallwayFloor, IsVoid
+                        );
                 }
             }
-
 
             // Add walls
             FillArea(0, 0, Settings.gridWidth - 1, Settings.gridHeight - 1, TileType.Wall, ShouldPlaceWall);
@@ -275,7 +278,7 @@ namespace Assets.Scripts.Generation
             }
 
             // Create dungeon struct
-            return new(grid, selectedEdges, Settings, seed);
+            return new(grid, selectedEdges, Settings, random);
         }
 
         private bool TryCreateRoom(out Room newRoom)
@@ -422,89 +425,7 @@ namespace Assets.Scripts.Generation
             }
         }
 
-        private bool TryFindPath(Vertex start, Vertex end, out List<Coordinate> path)
-        {
-            path = null;
-
-            // Validate start and end positions
-            if (!TryGetNode(start.ToCoordinate(), out Node startNode)) return false;
-            if (!TryGetNode(end.ToCoordinate(), out Node endNode)) return false;
-
-            List<Node> open = new();
-            open.Add(startNode);
-
-            HashSet<Node> closed = new();
-
-            // Iterate while all nodes have not been checked
-            while (open.Count > 0)
-            {
-                Node node = open[0];
-
-                // Get cheapest next node
-                Node current;
-                for (int i = 1; i < open.Count; i++)
-                {
-                    current = open[i];
-                    if (current.FCost < node.FCost || Approximately(current.FCost, node.FCost))
-                    {
-                        if (current.hCost < node.hCost)
-                            node = current;
-                    }
-                }
-
-                open.Remove(node);
-                closed.Add(node);
-
-                // Path has been found
-                if (node == endNode)
-                {
-                    path = RetracePath(startNode, endNode);
-                    break;
-                }
-
-                // Iterate through neighbors
-                foreach (Node neighbor in GetNeighbors(node))
-                {
-                    if (closed.Contains(neighbor)) continue;
-
-                    float cost = node.gCost + Distance(node.position, neighbor.position);
-
-                    bool openContainsNeighbor = open.Contains(neighbor);
-
-                    // Adds each neighbor cheaper than current node to open set
-                    if (cost < neighbor.gCost || !openContainsNeighbor)
-                    {
-                        neighbor.gCost = cost;
-                        neighbor.hCost = Distance(neighbor.position, endNode.position);
-                        neighbor.parent = node;
-
-                        if (!openContainsNeighbor)
-                            open.Add(neighbor);
-                    }
-                }
-            }
-
-            return path != null;
-        }
-
-        // Trace path from start to finish through parents
-        private static List<Coordinate> RetracePath(Node startNode, Node endNode)
-        {
-            List<Coordinate> path = new();
-            Node current = endNode;
-
-            while (current != startNode)
-            {
-                path.Add(current.parent.position);
-                current = current.parent;
-            }
-
-            path.Reverse();
-
-            return path;
-        }
-
-        private List<Node> GetNeighbors(Node node)
+        private List<Node> FindNeighbors(Node[,] nodes, Node node)
         {
             List<Node> result = new();
 
@@ -513,10 +434,10 @@ namespace Assets.Scripts.Generation
             {
                 if (x == 0 && y == 0) return;
 
-                checkX = node.position.x + x;
-                checkY = node.position.y + y;
+                checkX = (int)node.position.x + x;
+                checkY = (int)node.position.y + y;
 
-                if (TryGetNode(checkX, checkY, out Node neighbor))
+                if (TryGetNode(nodes, checkX, checkY, out Node neighbor))
                     result.Add(neighbor);
             });
 
@@ -525,15 +446,10 @@ namespace Assets.Scripts.Generation
 
         #region Functions for Getting Nodes
 
-        private bool TryGetNode(Coordinate coordinate, out Node node)
-        {
-            return TryGetNode(coordinate.x, coordinate.y, out node);
-        }
-
-        private bool TryGetNode(int x, int y, out Node node)
+        private bool TryGetNode(Node[,] nodes, int x, int y, out Node node)
         {
             if (WithinGrid(x, y))
-                node = allNodes[x, y];
+                node = nodes[x, y];
             else
                 node = null;
 
@@ -732,17 +648,6 @@ namespace Assets.Scripts.Generation
         private bool WithinGrid(int x, int y)
         {
             return (x >= 0 && y >= 0 && x < Settings.gridWidth && y < Settings.gridHeight);
-        }
-
-        public void IterateArea(int x1, int y1, int x2, int y2, Action<int, int> function)
-        {
-            for (int x = x1; x <= x2; x++)
-            {
-                for (int y = y1; y <= y2; y++)
-                {
-                    function(x, y);
-                }
-            }
         }
 
         public bool TryGetRandomRoomCenter(out Vertex center)
