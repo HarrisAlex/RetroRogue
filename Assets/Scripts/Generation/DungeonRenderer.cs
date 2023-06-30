@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using static Assets.Scripts.Generation.DungeonGeneration;
 
 namespace Assets.Scripts.Generation
 {
@@ -9,6 +10,7 @@ namespace Assets.Scripts.Generation
         public Material wallMaterial;
 
         private static Transform root;
+        private readonly float diagonalScale = Mathf.Sqrt(2);
 
         public Vector3 RenderDungeon(Dungeon dungeon)
         {
@@ -21,87 +23,108 @@ namespace Assets.Scripts.Generation
             int width = dungeon.GetWidth();
             int height = dungeon.GetHeight();
 
-            for (int x = 0; x < width; x++)
+            // Corner vars
+            TileType currentTile;
+            Transform current;
+
+            // Wall vars
+            Transform[] walls;
+            float[] wallAngles;
+            Vector3[] wallPositions;
+            int i;
+            float angle, xPos, yPos;
+            IterateArea(0, 0, width - 1, height - 1, (int x, int y) =>
             {
-                for (int y = 0; y < height; y++)
+                currentTile = dungeon.GetTile(x, y);
+
+                if (currentTile == TileType.Void || IsFloor(currentTile)) return;
+
+                if (IsCorner(currentTile))
                 {
-                    switch (dungeon.GetTile(x, y))
+                    current = CreatePlane(diagonalScale, 3, wallMaterial);
+
+                    switch (currentTile)
                     {
-                        case TileType.Wall:
-                            CreateWall(x, y, 0);
-                            break;
                         case TileType.TopLeftCorner:
-                            CreateCorner(x, y, TileType.TopLeftCorner);
-                            break;
-                        case TileType.TopRightCorner:
-                            CreateCorner(x, y, TileType.TopRightCorner);
-                            break;
-                        case TileType.BottomLeftCorner:
-                            CreateCorner(x, y, TileType.BottomLeftCorner);
+                            angle = 45;
+                            xPos = x - 0.5f;
+                            yPos = y + 0.5f;
                             break;
                         case TileType.BottomRightCorner:
-                            CreateCorner(x, y, TileType.BottomRightCorner);
+                            angle = 45;
+                            xPos = x + 0.5f;
+                            yPos = y - 0.5f;
+                            break;
+                        case TileType.BottomLeftCorner:
+                            angle = -45;
+                            xPos = x - 0.5f;
+                            yPos = y - 0.5f;
+                            break;
+                        default:
+                            angle = -45;
+                            xPos = x + 0.5f;
+                            yPos = y + 0.5f;
                             break;
                     }
-                }
-            }
 
-            Transform floor = CreatePlane(width, height, floorMaterial, 1);
-            floor.localScale = new Vector3(1, -1, 1);
+                    current.position = new Vector3(xPos, 0, yPos);
+                    current.eulerAngles = new Vector3(270, angle, 0);
+                    return;
+                }
+
+                walls = new Transform[4];
+                wallAngles = new float[4];
+                wallPositions = new Vector3[4];
+
+                // Right
+                if (IsFloor(dungeon.GetTile(x + 1, y)))
+                {
+                    walls[0] = CreatePlane(1, 3, wallMaterial);
+                    wallPositions[0] = new Vector3(x + 0.5f)
+                    wallAngles[0] = 90;
+                }
+
+                // Left
+                if (IsFloor(dungeon.GetTile(x - 1, y)))
+                {
+                    walls[1] = CreatePlane(1, 3, wallMaterial);
+                    wallAngles[1] = 270;
+                }
+
+                // Top
+                if (IsFloor(dungeon.GetTile(x, y + 1)))
+                {
+                    walls[2] = CreatePlane(1, 3, wallMaterial);
+                    wallAngles[2] = 0;
+                }
+
+                // Bottom
+                if (IsFloor(dungeon.GetTile(x + 1, y - 1)))
+                {
+                    walls[3] = CreatePlane(1, 3, wallMaterial);
+                    wallAngles[3] = 180;
+                }
+
+                for (i = 0; i < 4; i++)
+                {
+                    if (walls[i] != null)
+                    {
+                        walls[i].position = new Vector3(x + 0.5f, 0, y + 0.5f);
+                        walls[i].eulerAngles = new Vector3(270, wallAngles[i], 0);
+                    }
+                }
+            });
+
+            Transform floor = CreatePlane(width, height, floorMaterial, 120);
             floor.gameObject.AddComponent<BoxCollider>();
+            floor.eulerAngles = new Vector3(0, 90, 180);
             floor.parent = root;
 
-            Transform ceiling = CreatePlane(width, height, ceilingMaterial, 1);
+            Transform ceiling = CreatePlane(width, height, ceilingMaterial, 120);
             ceiling.position = new Vector3(0, 3, 0);
             ceiling.parent = root;
 
             return new Vector3(dungeon.spawn.x, 0, dungeon.spawn.y);
-        }
-
-        private void CreateWall(float x, float y, float angle)
-        {
-            if (root == null)
-                root = new GameObject("Dungeon").transform;
-
-            float scale = Mathf.Abs(angle) < 1 ? 1 : 1.415f;
-
-            Transform go = GameObject.CreatePrimitive(PrimitiveType.Cube).transform;
-            go.position = new Vector3(x, 1.5f, y);
-            go.localScale = new Vector3(scale, 3, scale);
-            go.eulerAngles = new Vector3(0, angle, 0);
-            go.parent = root;
-        }
-
-        private void CreateCorner(int x, int y, TileType cornerType)
-        {
-            float angle = 0;
-            float xPos = x, yPos = y;
-
-            switch (cornerType)
-            {
-                case TileType.TopLeftCorner:
-                    angle = 45;
-                    xPos = x - 0.5f;
-                    yPos = y + 0.5f;
-                    break;
-                case TileType.BottomRightCorner:
-                    angle = 45;
-                    xPos = x + 0.5f;
-                    yPos = y - 0.5f;
-                    break;
-                case TileType.BottomLeftCorner:
-                    angle = -45;
-                    xPos = x - 0.5f;
-                    yPos = y - 0.5f;
-                    break;
-                case TileType.TopRightCorner:
-                    angle = -45;
-                    xPos = x + 0.5f;
-                    yPos = y + 0.5f;
-                    break;
-            }
-
-            CreateWall(xPos, yPos, angle);
         }
 
         private Light CreateLight(int x, int y)
@@ -135,8 +158,14 @@ namespace Assets.Scripts.Generation
             return number * number;
         }
 
-        private Transform CreatePlane(int width, int height, Material material, int subvision = 0)
+        private Transform CreatePlane(float width, float height, Material material, int subvision = 0)
         {
+            if (root == null)
+                root = new GameObject("Dungeon").transform;
+
+            if (subvision > 254)
+                subvision = 254;
+
             MeshDescription description = new MeshDescription();
 
             description.name = "Floor";
@@ -144,13 +173,13 @@ namespace Assets.Scripts.Generation
             description.triangles = new int[2 * Square(subvision + 1) * 3];
             description.uvs = new Vector2[description.vertices.Length];
 
-            int vertexIterations = (description.vertices.Length / 2) - 1;
+            int vertexIterations = subvision + 1;
 
-            for (int x = 0, i = 0; x < vertexIterations; x++)
+            for (int x = 0, i = 0; x <= vertexIterations; x++)
             {
-                for (int y = 0; y < vertexIterations; y++, i++)
+                for (int y = 0; y <= vertexIterations; y++, i++)
                 {
-                    description.vertices[i] = new Vector3(Mathf.Lerp(0, width, x), 0, Mathf.Lerp(0, height, y));
+                    description.vertices[i] = new Vector3(Mathf.Lerp(0, width, (float)x / vertexIterations), 0, Mathf.Lerp(0, height, (float)y / vertexIterations));
                     description.uvs[i] = new Vector2(x, y);
                 }
             }
@@ -168,13 +197,14 @@ namespace Assets.Scripts.Generation
                 }
             }
 
-            return GenerateMesh(description, material);
+            return GenerateMesh(description, material, root);
         }
 
-        private Transform GenerateMesh(MeshDescription description, Material material)
+        private Transform GenerateMesh(MeshDescription description, Material material, Transform root)
         {
             Mesh mesh = new Mesh();
             GameObject go = new GameObject();
+            go.transform.parent = root;
             mesh.name = go.name = description.name;
 
             go.AddComponent<MeshFilter>().mesh = mesh;
@@ -183,7 +213,6 @@ namespace Assets.Scripts.Generation
 
             mesh.vertices = description.vertices;
             mesh.triangles = description.triangles;
-            mesh.RecalculateNormals();
             mesh.RecalculateTangents();
             mesh.uv = description.uvs;
 

@@ -180,5 +180,16 @@ namespace Assets.Scripts.Generation
                 }
             }
         }
+
+        public static bool IsFloor(TileType type)
+        {
+            return type == TileType.HallwayFloor || type == TileType.RoomFloor;
+        }
+
+        public static bool IsCorner(TileType type)
+        {
+            return type == TileType.BottomLeftCorner || type == TileType.BottomRightCorner
+                || type == TileType.TopLeftCorner || type == TileType.TopRightCorner;
+        }
     }
 }

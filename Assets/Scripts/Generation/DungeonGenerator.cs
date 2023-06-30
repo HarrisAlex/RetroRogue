@@ -601,19 +601,6 @@ namespace Assets.Scripts.Generation
 
         #endregion
 
-        private bool IsCorner(int x, int y)
-        {
-            if (!WithinGrid(x, y)) return false;
-            if (GetCoordinate(x, y) != TileType.HallwayFloor) return false;
-
-            return true;
-        }
-
-        private bool IsFloor(TileType type)
-        {
-            return type == TileType.HallwayFloor || type == TileType.RoomFloor;
-        }
-
         #region Functions for Getting Tiles
 
         public TileType GetCoordinate(int x, int y)
@@ -644,6 +631,14 @@ namespace Assets.Scripts.Generation
         }
 
         #endregion
+
+        private bool IsCorner(int x, int y)
+        {
+            if (!WithinGrid(x, y)) return false;
+            if (GetCoordinate(x, y) != TileType.HallwayFloor) return false;
+
+            return true;
+        }
 
         private bool WithinGrid(int x, int y)
         {
