@@ -17,57 +17,6 @@ namespace Assets.Scripts.Generation
         BottomRightCorner,
     }
 
-    public readonly struct Dungeon
-    {
-        public readonly Vertex spawn;
-        public readonly Navigation navigation;
-
-        private readonly TileType[,] grid;
-        private readonly GenerationSettings settings;
-
-        public Dungeon(TileType[,] grid, HashSet<Edge> edges, GenerationSettings settings, Random random)
-        {
-            this.grid = grid;
-
-            List<Vertex> vertices = new();
-            foreach (Edge edge in edges)
-            {
-                if (!vertices.Contains(edge.u))
-                    vertices.Add(edge.u);
-                if (!vertices.Contains(edge.v))
-                    vertices.Add(edge.v);
-            }
-
-            spawn = vertices[random.Next(0, vertices.Count - 1)];
-
-            // Create a new node for each vertex
-            List<Node> nodes = new();
-            foreach (Vertex vertex in vertices)
-                nodes.Add(new(vertex.x, vertex.y));
-
-            navigation = new Navigation(nodes);
-
-            this.settings = settings;
-        }
-
-        public TileType GetTile(int x, int y)
-        {
-            if (x < 0 || x >= grid.GetLength(0) || y < 0 || y >= grid.GetLength(1)) return TileType.Void;
-
-            return grid[x, y];
-        }
-
-        public int GetWidth()
-        {
-            return settings.gridWidth;
-        }
-
-        public int GetHeight()
-        {
-            return settings.gridHeight;
-        }
-    }
-
     public class Room
     {
         public int xPosition;
@@ -151,8 +100,6 @@ namespace Assets.Scripts.Generation
                 if (TryCreateRoom(out newRoom))
                 {
                     rooms.Add(newRoom);
-
-                    DungeonDebug.DrawRoom(newRoom, 500, UnityEngine.Color.red);
 
                     FillArea(newRoom.xPosition, newRoom.yPosition,
                         newRoom.xPosition + newRoom.width, newRoom.yPosition + newRoom.height, TileType.RoomFloor);
@@ -277,8 +224,15 @@ namespace Assets.Scripts.Generation
                     room.lights.Add(room.GetCenter());
             }
 
+            Dungeon dungeon = new(grid, selectedEdges, Settings, random);
+
+#if UNITY_EDITOR
+            if (DungeonDebug.instance != null)
+                DungeonDebug.SetDungeon(dungeon);
+#endif
+
             // Create dungeon struct
-            return new(grid, selectedEdges, Settings, random);
+            return dungeon;
         }
 
         private bool TryCreateRoom(out Room newRoom)

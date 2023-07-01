@@ -1,7 +1,10 @@
 ManifestFileVersion: 0
-CRC: 1642137400
+CRC: 2672001597
 AssetBundleManifest:
   AssetBundleInfos:
     Info_0:
       Name: footsteps
+      Dependencies: {}
+    Info_1:
+      Name: ai
       Dependencies: {}

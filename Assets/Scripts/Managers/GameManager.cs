@@ -1,6 +1,7 @@
 using UnityEngine;
 using Assets.Scripts.Generation;
 using System;
+using static Assets.Scripts.Generation.DungeonGeneration;
 
 [RequireComponent(typeof(DungeonRenderer))]
 public class GameManager : MonoBehaviour

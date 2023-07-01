@@ -14,7 +14,8 @@ public class LookController : MonoBehaviour
 
     private void Awake()
     {
-        camera = transform.GetChild(0);
+        if (transform.childCount > 0)
+            camera = transform.GetChild(0);
     }
 
     private void LateUpdate()
@@ -33,8 +34,9 @@ public class LookController : MonoBehaviour
         lookVelocity.y = Mathf.Clamp(lookVelocity.y, lookAngleMin, lookAngleMax);
 
         // Apply rotation
-        camera.localEulerAngles = new Vector3(lookVelocity.y, 0, 0);
         transform.eulerAngles = new Vector3(0, lookVelocity.x, 0);
+        if (camera != null)
+            camera.localEulerAngles = new Vector3(lookVelocity.y, 0, 0);
     }
 
     public void SetInput(float horizontal, float vertical)

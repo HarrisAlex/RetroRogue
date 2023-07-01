@@ -9,7 +9,8 @@ namespace Assets.Scripts.Generation
         public Material ceilingMaterial;
         public Material wallMaterial;
 
-        private static Transform root;
+        private Transform root;
+        private Transform wallRoot;
         private readonly float diagonalScale = Mathf.Sqrt(2);
 
         public Vector3 RenderDungeon(Dungeon dungeon)
@@ -28,17 +29,11 @@ namespace Assets.Scripts.Generation
             Transform current;
 
             // Wall vars
-            Transform[] walls;
-            float[] wallAngles;
-            Vector3[] wallPositions;
-            char[] names = { 'R', 'L', 'T', 'B' };
             string cornerName;
-            int i;
             float angle, xPos, yPos;
             IterateArea(0, 0, width - 1, height - 1, (int x, int y) =>
             {
                 currentTile = dungeon.GetTile(x, y);
-
                 if (!IsWall(currentTile)) return;
 
                 if (IsCorner(currentTile))
@@ -72,70 +67,66 @@ namespace Assets.Scripts.Generation
                             cornerName = "TR";
                             break;
                     }
-                    current.name = "(" + x + ", " + y + ") " + cornerName;
+
+#if UNITY_EDITOR
+                    SetWallName(current, x, y, cornerName);
+#endif
+
 
                     current.position = new Vector3(xPos, 0, yPos);
                     current.eulerAngles = new Vector3(270, angle, 0);
+                    current.parent = wallRoot;
                     return;
                 }
 
-                walls = new Transform[4];
-                wallAngles = new float[4];
-                wallPositions = new Vector3[4];
-
                 // Right
                 if (IsFloor(dungeon.GetTile(x + 1, y)))
-                {
-                    walls[0] = CreatePlane(1, 3, wallMaterial);
-                    wallPositions[0] = new Vector3(x + 1, 0, y + 1);
-                    wallAngles[0] = 90;
-                }
+                    CreateWall(x + 1, y + 1, 90, "R");
 
                 // Left
                 if (IsFloor(dungeon.GetTile(x - 1, y)))
-                {
-                    walls[1] = CreatePlane(1, 3, wallMaterial);
-                    wallPositions[1] = new Vector3(x, 0, y);
-                    wallAngles[1] = 270;
-                }
+                    CreateWall(x, y, 270, "L");
 
                 // Top
                 if (IsFloor(dungeon.GetTile(x, y + 1)))
-                {
-                    walls[2] = CreatePlane(1, 3, wallMaterial);
-                    wallPositions[2] = new Vector3(x, 0, y + 1);
-                    wallAngles[2] = 0;
-                }
+                    CreateWall(x, y + 1, 0, "T");
 
                 // Bottom
                 if (IsFloor(dungeon.GetTile(x, y - 1)))
-                {
-                    walls[3] = CreatePlane(1, 3, wallMaterial);
-                    wallPositions[3] = new Vector3(x + 1, 0, y);
-                    wallAngles[3] = 180;
-                }
-
-                for (i = 0; i < 4; i++)
-                {
-                    if (walls[i] != null)
-                    {
-                        walls[i].name = "(" + x + ", " + y + ") " + names[i];
-                        walls[i].position = wallPositions[i];
-                        walls[i].eulerAngles = new Vector3(270, wallAngles[i], 0);
-                    }
-                }
+                    CreateWall(x + 1, y, 180, "B");
             });
 
             Transform floor = CreatePlane(width, height, floorMaterial, 120);
             floor.gameObject.AddComponent<BoxCollider>();
             floor.eulerAngles = new Vector3(0, 90, 180);
-            floor.parent = root;
 
             Transform ceiling = CreatePlane(width, height, ceilingMaterial, 120);
             ceiling.position = new Vector3(0, 3, 0);
-            ceiling.parent = root;
 
             return new Vector3(dungeon.spawn.x, 0, dungeon.spawn.y);
+        }
+
+        private void CreateWall(int x, int y, float angle, string suffix)
+        {
+            if (wallRoot == null)
+            {
+                wallRoot = new GameObject("Walls").transform;
+                wallRoot.parent = root;
+            }
+
+            Transform wall = CreatePlane(1, 3, wallMaterial);
+            wall.position = new Vector3(x, 0, y);
+            wall.eulerAngles = new Vector3(270, angle, 0);
+            wall.parent = wallRoot;
+
+            SetWallName(wall, x, y, suffix);
+        }
+
+        private void SetWallName(Transform transform, int x, int y, string suffix)
+        {
+#if UNITY_EDITOR
+            transform.name = string.Concat("(", x, ", ", y, ") ", suffix);
+#endif
         }
 
         private Light CreateLight(int x, int y)
