@@ -31,13 +31,15 @@ namespace Assets.Scripts.Generation
             Transform[] walls;
             float[] wallAngles;
             Vector3[] wallPositions;
+            char[] names = { 'R', 'L', 'T', 'B' };
+            string cornerName;
             int i;
             float angle, xPos, yPos;
             IterateArea(0, 0, width - 1, height - 1, (int x, int y) =>
             {
                 currentTile = dungeon.GetTile(x, y);
 
-                if (currentTile == TileType.Void || IsFloor(currentTile)) return;
+                if (!IsWall(currentTile)) return;
 
                 if (IsCorner(currentTile))
                 {
@@ -46,26 +48,31 @@ namespace Assets.Scripts.Generation
                     switch (currentTile)
                     {
                         case TileType.TopLeftCorner:
-                            angle = 45;
-                            xPos = x - 0.5f;
-                            yPos = y + 0.5f;
+                            angle = 135;
+                            xPos = x + 1;
+                            yPos = y + 1;
+                            cornerName = "TL";
                             break;
                         case TileType.BottomRightCorner:
-                            angle = 45;
-                            xPos = x + 0.5f;
-                            yPos = y - 0.5f;
+                            angle = -45;
+                            xPos = x;
+                            yPos = y;
+                            cornerName = "BR";
                             break;
                         case TileType.BottomLeftCorner:
-                            angle = -45;
-                            xPos = x - 0.5f;
-                            yPos = y - 0.5f;
+                            angle = 45;
+                            xPos = x;
+                            yPos = y + 1;
+                            cornerName = "BL";
                             break;
                         default:
-                            angle = -45;
-                            xPos = x + 0.5f;
-                            yPos = y + 0.5f;
+                            angle = -135;
+                            xPos = x + 1;
+                            yPos = y;
+                            cornerName = "TR";
                             break;
                     }
+                    current.name = "(" + x + ", " + y + ") " + cornerName;
 
                     current.position = new Vector3(xPos, 0, yPos);
                     current.eulerAngles = new Vector3(270, angle, 0);
@@ -80,7 +87,7 @@ namespace Assets.Scripts.Generation
                 if (IsFloor(dungeon.GetTile(x + 1, y)))
                 {
                     walls[0] = CreatePlane(1, 3, wallMaterial);
-                    wallPositions[0] = new Vector3(x + 0.5f)
+                    wallPositions[0] = new Vector3(x + 1, 0, y + 1);
                     wallAngles[0] = 90;
                 }
 
@@ -88,6 +95,7 @@ namespace Assets.Scripts.Generation
                 if (IsFloor(dungeon.GetTile(x - 1, y)))
                 {
                     walls[1] = CreatePlane(1, 3, wallMaterial);
+                    wallPositions[1] = new Vector3(x, 0, y);
                     wallAngles[1] = 270;
                 }
 
@@ -95,13 +103,15 @@ namespace Assets.Scripts.Generation
                 if (IsFloor(dungeon.GetTile(x, y + 1)))
                 {
                     walls[2] = CreatePlane(1, 3, wallMaterial);
+                    wallPositions[2] = new Vector3(x, 0, y + 1);
                     wallAngles[2] = 0;
                 }
 
                 // Bottom
-                if (IsFloor(dungeon.GetTile(x + 1, y - 1)))
+                if (IsFloor(dungeon.GetTile(x, y - 1)))
                 {
                     walls[3] = CreatePlane(1, 3, wallMaterial);
+                    wallPositions[3] = new Vector3(x + 1, 0, y);
                     wallAngles[3] = 180;
                 }
 
@@ -109,7 +119,8 @@ namespace Assets.Scripts.Generation
                 {
                     if (walls[i] != null)
                     {
-                        walls[i].position = new Vector3(x + 0.5f, 0, y + 0.5f);
+                        walls[i].name = "(" + x + ", " + y + ") " + names[i];
+                        walls[i].position = wallPositions[i];
                         walls[i].eulerAngles = new Vector3(270, wallAngles[i], 0);
                     }
                 }
@@ -180,7 +191,7 @@ namespace Assets.Scripts.Generation
                 for (int y = 0; y <= vertexIterations; y++, i++)
                 {
                     description.vertices[i] = new Vector3(Mathf.Lerp(0, width, (float)x / vertexIterations), 0, Mathf.Lerp(0, height, (float)y / vertexIterations));
-                    description.uvs[i] = new Vector2(x, y);
+                    description.uvs[i] = new Vector2(x * (width / vertexIterations), y * (height / vertexIterations));
                 }
             }
 
@@ -213,6 +224,7 @@ namespace Assets.Scripts.Generation
 
             mesh.vertices = description.vertices;
             mesh.triangles = description.triangles;
+            mesh.RecalculateNormals();
             mesh.RecalculateTangents();
             mesh.uv = description.uvs;
 

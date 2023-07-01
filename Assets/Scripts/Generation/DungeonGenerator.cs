@@ -152,14 +152,14 @@ namespace Assets.Scripts.Generation
                 {
                     rooms.Add(newRoom);
 
+                    DungeonDebug.DrawRoom(newRoom, 500, UnityEngine.Color.red);
+
                     FillArea(newRoom.xPosition, newRoom.yPosition,
                         newRoom.xPosition + newRoom.width, newRoom.yPosition + newRoom.height, TileType.RoomFloor);
                 }
             }
 
-
             Triangulate();
-
 
             // Create hallways
             selectedEdges = new();

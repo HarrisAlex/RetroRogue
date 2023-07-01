@@ -191,5 +191,10 @@ namespace Assets.Scripts.Generation
             return type == TileType.BottomLeftCorner || type == TileType.BottomRightCorner
                 || type == TileType.TopLeftCorner || type == TileType.TopRightCorner;
         }
+
+        public static bool IsWall(TileType type)
+        {
+            return type == TileType.Wall || IsCorner(type);
+        }
     }
 }
