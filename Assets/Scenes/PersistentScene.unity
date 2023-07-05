@@ -154,6 +154,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   allowedTypes:
   - Guard
+  preconditions:
+  - name: 
+    value: 0
+  postconditions:
+  - name: 
+    value: 0
 --- !u!4 &74884398
 Transform:
   m_ObjectHideFlags: 0
