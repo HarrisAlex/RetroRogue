@@ -11,6 +11,7 @@ public class CreateAssetBundles
         {
             Directory.CreateDirectory(Application.streamingAssetsPath);
         }
+
         BuildPipeline.BuildAssetBundles(Application.streamingAssetsPath, BuildAssetBundleOptions.None, EditorUserBuildSettings.activeBuildTarget);
     }
 }

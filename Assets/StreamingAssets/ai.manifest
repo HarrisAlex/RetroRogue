@@ -1,33 +1,24 @@
 ManifestFileVersion: 0
-CRC: 2617768147
+CRC: 969067076
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 761c12859d7f1ef5e9d04cd75c9b36a5
+    Hash: 861f3f9468f4e4328919402a2ca22491
   TypeTreeHash:
     serializedVersion: 2
-    Hash: 999aed6621a478dedec01530d121928d
+    Hash: 37182839ce9c2906b1c524deec328440
 HashAppended: 0
 ClassTypes:
-- Class: 114
-  Script: {fileID: 11500000, guid: 56b245f971059f24399b7db26517b2bc, type: 3}
 - Class: 114
   Script: {fileID: 11500000, guid: 11f1d6df4463a154b995846155f246f8, type: 3}
 - Class: 114
   Script: {fileID: 11500000, guid: 950178360e7a93d46a81bb3c0bf7f163, type: 3}
 - Class: 115
   Script: {instanceID: 0}
-SerializeReferenceClassIdentifiers:
-- AssemblyName: Assembly-CSharp
-  ClassName: ConditionValuePair
+SerializeReferenceClassIdentifiers: []
 Assets:
-- Assets/Gameplay/AI/Conditions/nearPlayer.asset
 - Assets/Gameplay/AI/Actions/shootPlayer.asset
 - Assets/Gameplay/AI/Goals/killPlayer.asset
 - Assets/Gameplay/AI/Actions/meleePlayer.asset
-- Assets/Gameplay/AI/Conditions/playerDead.asset
-- Assets/Gameplay/AI/Conditions/hasRanged.asset
 - Assets/Gameplay/AI/Actions/goTo.asset
-- Assets/Gameplay/AI/Conditions/hasMelee.asset
-- Assets/Gameplay/AI/Conditions/hasAmmo.asset
 Dependencies: []

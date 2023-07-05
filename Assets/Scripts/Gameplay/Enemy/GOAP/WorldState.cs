@@ -1,104 +1,163 @@
 ﻿using System.Collections.Generic;
-using UnityEngine;
 
-[System.Serializable]
-public class WorldState : ScriptableObject
+namespace Assets.Scripts.AI
 {
-    public List<ConditionValuePair> conditions = new();
-
-    public override bool Equals(object o)
+    public struct WorldState
     {
-        if (o.GetType() != typeof(WorldState))
-            return false;
+        public List<Condition> Conditions { get; private set; }
 
-        return this == (WorldState)o;
-    }
-
-    public override int GetHashCode()
-    {
-        return base.GetHashCode();
-    }
-
-    public bool ContainsCondition(ConditionValuePair condition)
-    {
-        foreach (ConditionValuePair pair in conditions)
+        public WorldState(List<Condition> conditions)
         {
-            if (pair.condition == condition.condition)
+            Conditions = conditions;
+        }
+
+        public static WorldState CombineStates(WorldState current, WorldState addition)
+        {
+            WorldState result = new(new());
+
+            foreach (Condition condition in current.Conditions)
+                result.SetCondition(condition.name, condition.value);
+
+            foreach (Condition condition in addition.Conditions)
+                result.SetCondition(condition.name, condition.value);
+
+            return result;
+        }
+
+        public bool ContainsCondition(Condition condition)
+        {
+            for (int i = 0; i < Conditions.Count; i++)
+            {
+                if (Conditions[i].name == condition.name)
+                    return true;
+            }
+
+            return false;
+        }
+
+        public bool GetCondition(Condition condition)
+        {
+            if (!ContainsCondition(condition)) return false;
+
+            for (int i = 0; i < Conditions.Count; i++)
+            {
+                if (Conditions[i].name == condition.name)
+                    return Conditions[i].value;
+            }
+
+            return false;
+        }
+
+        public void SetCondition(string condition, bool value)
+        {
+            Condition tmpCond = new(condition, value);
+            if (ContainsCondition(tmpCond))
+            {
+                for (int i = 0; i < Conditions.Count; i++)
+                {
+                    if (Conditions[i].name == condition)
+                    {
+                        Conditions[i] = tmpCond;
+                        return;
+                    }
+                }
+            }
+
+            Conditions.Add(tmpCond);
+        }
+
+        public bool MatchesState(WorldState state)
+        {
+            foreach (Condition condition in state.Conditions)
+            {
+                if (!ContainsCondition(condition)) return false;
+
+                if (GetCondition(condition) != state.GetCondition(condition)) return false;
+            }
+
+            return true;
+        }
+
+        public override bool Equals(object o)
+        {
+            if (o.GetType() != typeof(WorldState))
+                return false;
+
+            return this == (WorldState)o;
+        }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
+        }
+
+        public static bool operator ==(WorldState a, WorldState b)
+        {
+            if (a.Conditions == null || b.Conditions == null)
+                return false;
+
+            foreach (Condition condition in a.Conditions)
+            {
+                if (b.ContainsCondition(condition))
+                {
+                    if (a.GetCondition(condition) != b.GetCondition(condition))
+                        return false;
+                }
+                else
+                    return false;
+            }
+
+            return true;
+        }
+
+        public static bool operator !=(WorldState a, WorldState b)
+        {
+            if (a.Conditions == null || b.Conditions == null)
                 return true;
-        }
 
-        return false;
-    }
+            foreach (Condition condition in a.Conditions)
+            {
+                if (b.ContainsCondition(condition))
+                {
+                    if (a.GetCondition(condition) != b.GetCondition(condition))
+                        return true;
+                }
+            }
 
-    public bool GetConditionValue(ConditionValuePair condition)
-    {
-        if (!ContainsCondition(condition)) return false;
-
-        foreach (ConditionValuePair pair in conditions)
-        {
-            if (pair.condition == condition.condition)
-                return pair.value;
-        }
-
-        return false;
-    }
-
-    public static bool operator ==(WorldState a, WorldState b)
-    {
-        if (a.conditions == null || b.conditions == null)
             return false;
-
-        foreach (ConditionValuePair condition in a.conditions)
-        {
-            if (b.ContainsCondition(condition))
-            {
-                if (a.GetConditionValue(condition) != b.GetConditionValue(condition))
-                    return false;
-            }
         }
-
-        return true;
     }
 
-    public static bool operator !=(WorldState a, WorldState b)
+    public struct Condition
     {
-        foreach (ConditionValuePair condition in a.conditions)
-        {
-            if (b.ContainsCondition(condition))
-            {
-                if (a.GetConditionValue(condition) != b.GetConditionValue(condition))
-                    return true;
-            }
-        }
+        public string name;
+        public bool value;
 
-        return false;
+        public Condition(string name, bool value)
+        {
+            this.name = name;
+            this.value = value;
+        }
     }
 
-    public static bool operator ==(List<ConditionValuePair> conditions, WorldState state)
+    public class Conditions
     {
-        foreach (ConditionValuePair condition in conditions)
-        {
-            if (state.ContainsCondition(condition))
-            {
-                if (condition.value != state.GetConditionValue(condition))
-                    return false;
-            }
-        }
+        public const string HAS_AMMO = "hasAmmo";
+        public const string HAS_RANGED = "hasRanged";
+        public const string HAS_MELEE = "hasMelee";
+        public const string NEAR_PLAYER = "nearPlayer";
+        public const string PLAYER_DEAD = "playerDead";
+        public const string TIRED = "tired";
+        public const string NEAR_ALLY = "nearAlly";
+        public const string BORED = "bored";
+        public const string HUNGRY = "hungry";
+        public const string NEAR_BED = "nearBed";
+        public const string LOW_HEALTH = "lowHealth";
+        public const string NEAR_HEALTH = "nearHealth";
 
-        return true;
-    }
+        public const string AWARE_OF_PLAYER = "awareOfPlayer";
+        public const string AWARE_OF_SOUND = "awareOfSound";
 
-    public static bool operator !=(List<ConditionValuePair> conditions, WorldState state)
-    {
-        foreach (ConditionValuePair condition in conditions)
-        {
-            if (state.ContainsCondition(condition))
-            {
-                if (condition.value != state.GetConditionValue(condition))
-                    return true;
-            }
-        }
-
-        return false;
+        public const string CAN_SEE_PLAYER = "canSeePlayer";
     }
 }
