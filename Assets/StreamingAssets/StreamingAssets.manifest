@@ -1,10 +1,10 @@
 ManifestFileVersion: 0
-CRC: 2836921278
+CRC: 300829691
 AssetBundleManifest:
   AssetBundleInfos:
     Info_0:
       Name: footsteps
       Dependencies: {}
     Info_1:
-      Name: ai
+      Name: dungeon_graphics
       Dependencies: {}

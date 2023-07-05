@@ -128,6 +128,7 @@ namespace Assets.Scripts.AI
         }
     }
 
+    [System.Serializable]
     public struct Condition
     {
         public string name;

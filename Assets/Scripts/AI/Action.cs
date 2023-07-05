@@ -83,9 +83,10 @@ namespace Assets.Scripts.AI
 
     public class AGoTo : Action
     {
-        public AGoTo(Vector3 currentPosition, Vector3 destination, WorldState postconditions)
+        private Transform destination;
+        public AGoTo(Transform destination, WorldState postconditions)
         {
-            cost = (currentPosition - destination).sqrMagnitude < 400 ? 1 : 2;
+            this.destination = destination;
 
             this.postconditions = postconditions;
         }
@@ -93,8 +94,11 @@ namespace Assets.Scripts.AI
 
     public class AUseObject : Action
     {
-        public AUseObject(WorldState postconditions)
+        public AUseObject(WorldState preconditions, WorldState postconditions)
         {
+            cost = 2;
+
+            this.preconditions = preconditions;
             this.postconditions = postconditions;
         }
     }

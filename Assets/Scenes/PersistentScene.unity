@@ -123,6 +123,52 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &74884396
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 74884398}
+  - component: {fileID: 74884397}
+  m_Layer: 0
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &74884397
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 74884396}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 93f11b753bb54ec4f80d4bb18e2ee921, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  allowedTypes:
+  - Guard
+--- !u!4 &74884398
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 74884396}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 6
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &384370827
 GameObject:
   m_ObjectHideFlags: 0
@@ -141,7 +187,7 @@ GameObject:
   - component: {fileID: 384370834}
   - component: {fileID: 384370837}
   m_Layer: 0
-  m_Name: Enemy
+  m_Name: Guard
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -258,10 +304,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d549b892886bffc439e0407252bff5a0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  goal: {fileID: 11400000, guid: 57d308f10c486774bb532bb88a7a3744, type: 2}
-  availableActions:
-  - {fileID: 11400000, guid: 59d39dedb75fc0d46a5a7e81484ea1c4, type: 2}
-  - {fileID: 11400000, guid: cef77b0a482e5154d84d1ad319fa8fee, type: 2}
 --- !u!114 &384370835
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -300,7 +342,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 384370827}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2186b4d1e525f0745b0b6b92484c2784, type: 3}
+  m_Script: {fileID: 11500000, guid: 97d1c2441a8e0fa4b905b46c4f739a1d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1 &751227658
@@ -385,6 +427,7 @@ GameObject:
   - component: {fileID: 838776639}
   - component: {fileID: 838776640}
   - component: {fileID: 838776641}
+  - component: {fileID: 838776642}
   m_Layer: 0
   m_Name: Managers
   m_TagString: Untagged
@@ -476,6 +519,18 @@ MonoBehaviour:
   enableDebugging: 0
   drawWallTiles: 0
   hideWalls: 0
+--- !u!114 &838776642
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 838776635}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 912acc89241a99347b5dc3d6826deb9b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1069203003
 GameObject:
   m_ObjectHideFlags: 0

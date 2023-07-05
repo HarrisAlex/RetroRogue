@@ -11,25 +11,10 @@ public class SystemsManager : MonoBehaviour
 
     private void Awake()
     {
-        InitializeSingleton();
-
-        //InitializeSystems();
-
-    }
-
-    private void InitializeSingleton()
-    {
-        if (instance)
-        {
-            if (instance != this)
-            {
-                Destroy(this);
-            }
-
-            return;
-        }
-
-        instance = this;
+        if (instance == null)
+            instance = this;
+        else if (instance != this)
+            Destroy(this);
     }
 
     private bool GetAllOfType(System.Type type, out Object[] objectArray)

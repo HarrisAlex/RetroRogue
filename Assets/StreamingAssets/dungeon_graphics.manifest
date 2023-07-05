@@ -1,0 +1,23 @@
+ManifestFileVersion: 0
+CRC: 456963275
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: bf795dbae0302a6b27a5b0acc40cdc10
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: f9f3d136959ac0e7043e721e899342fb
+HashAppended: 0
+ClassTypes:
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 28
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/Art/Materials/Dungeon/DungeonFloor.mat
+- Assets/Art/Materials/Dungeon/DungeonCeiling.mat
+- Assets/Art/Materials/Dungeon/Textures/dungeonFloor_AL.png
+Dependencies: []

@@ -19,13 +19,9 @@ public class LightManager : MonoBehaviour
     private void Start()
     {
         if (instance == null)
-        {
             instance = this;
-        }
         else if (instance != this)
-        {
             Destroy(this);
-        }
 
         player = GameManager.player;
     }

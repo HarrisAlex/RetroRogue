@@ -234,5 +234,11 @@ namespace Assets.Scripts.AI
 
             return cost;
         }
+
+        public void AddSmartObject(ISmartObject smartObject)
+        {
+            actions.Add(new AUseObject(smartObject.GetPreconditions(), smartObject.GetPostconditions()));
+            actions.Add(new AGoTo(smartObject.GetTransform(), smartObject.GetPreconditions()));
+        }
     }
 }
