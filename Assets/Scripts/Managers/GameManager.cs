@@ -32,7 +32,10 @@ public class GameManager : MonoBehaviour
         Cursor.visible = true;
 
         Player.PlayerDeath += GameEnd;
+    }
 
+    private void Start()
+    {
         StartGame();
     }
 

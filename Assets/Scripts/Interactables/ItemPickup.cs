@@ -27,7 +27,6 @@ public class ItemPickup : MonoBehaviour, IInteractable, ISmartObject
 
     public List<Type> GetAllowedTypes()
     {
-        Debug.Log(typeof(Guard));
         List<Type> result = new();
 
         foreach (string character in allowedTypes)
@@ -41,8 +40,23 @@ public class ItemPickup : MonoBehaviour, IInteractable, ISmartObject
         return result;
     }
 
+    public string GetAnimationName()
+    {
+        return "Pick Up";
+    }
+
     public void Interact()
     {
         throw new System.NotImplementedException();
+    }
+
+    public float GetAnimationDuration()
+    {
+        return 0;
+    }
+
+    public Condition GetAnimationCondition()
+    {
+        return new Condition("", false);
     }
 }

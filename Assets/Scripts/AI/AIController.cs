@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using System.Collections;
 
 namespace Assets.Scripts.AI
 {
@@ -16,22 +17,33 @@ namespace Assets.Scripts.AI
         private MovementController movementController;
         private LookController lookController;
         private CombatController combatController;
+        private Animator animator;
 
         private List<Action> actions;
 
-        private WorldState currentState;
-        private WorldState goalState;
+        private WorldState currentWorldState;
+        private WorldState goalWorldState;
 
+        private Stack<Action> currentPath;
         private Action currentAction;
 
         // Navigation
         private Vector3 destination = Vector3.zero;
+
+        // FSM
+        public enum States
+        {
+            GoTo,
+            Animate
+        }
+        private States currentState;
 
         private void Awake()
         {
             movementController = GetComponent<MovementController>();
             lookController = GetComponent<LookController>();
             combatController = GetComponent<CombatController>();
+            animator = GetComponent<Animator>();
 
             // Initialize AI
             Actions.CreateActions();
@@ -44,30 +56,22 @@ namespace Assets.Scripts.AI
             actions.Add(Actions.Chase);
             actions.Add(Actions.Recover);
 
-            goalState = new(new());
-            goalState.SetCondition(Conditions.PLAYER_DEAD, true);
+            goalWorldState = new(new());
+            goalWorldState.SetCondition(Conditions.PLAYER_DEAD, true);
 
-            currentState = new WorldState(new());
-            currentState.SetCondition(Conditions.HAS_AMMO, false);
-            currentState.SetCondition(Conditions.HAS_RANGED, true);
-            currentState.SetCondition(Conditions.HAS_MELEE, true);
-            currentState.SetCondition(Conditions.PLAYER_DEAD, false);
-            currentState.SetCondition(Conditions.CAN_SEE_PLAYER, false);
-            currentState.SetCondition(Conditions.NEAR_PLAYER, true);
-            currentState.SetCondition(Conditions.AWARE_OF_PLAYER, true);
+            currentWorldState = new WorldState(new());
+            currentWorldState.SetCondition(Conditions.HAS_AMMO, false);
+            currentWorldState.SetCondition(Conditions.HAS_RANGED, true);
+            currentWorldState.SetCondition(Conditions.HAS_MELEE, false);
+            currentWorldState.SetCondition(Conditions.PLAYER_DEAD, false);
+            currentWorldState.SetCondition(Conditions.CAN_SEE_PLAYER, false);
+            currentWorldState.SetCondition(Conditions.NEAR_PLAYER, true);
+            currentWorldState.SetCondition(Conditions.AWARE_OF_PLAYER, true);
 
-            List<Action> path = FindPath();
-            if (path.Count > 0)
-            {
-                int count = 1;
-                foreach (Action action in path)
-                {
-                    Debug.Log(count + ": " + action.GetType().ToString().Split('.')[3].Remove(0, 1));
-                    count++;
-                }
-            }
-            else
-                Debug.Log("No path");
+            currentPath = new();
+
+            // FSM
+            currentState = States.Animate;
         }
 
         private void Update()
@@ -75,41 +79,92 @@ namespace Assets.Scripts.AI
             movementController.SetInput(destination.x - transform.position.x, destination.z - transform.position.z);
             lookController.SetInput(Vector3.Angle(transform.forward, (destination - transform.position).normalized), 0);
 
-            if (currentState != goalState)
-            {
+            if (currentWorldState == goalWorldState) return;
 
+            if (currentPath.Count < 1)
+            {
+                currentPath = FindPath();
+                currentAction = null;
+                return;
+            }
+
+            if (currentAction == null)
+            {
+                currentAction = currentPath.Pop();
+
+                if (currentAction.GetType() == typeof(AGoTo))
+                    currentState = States.GoTo;
+                else
+                    currentState = States.Animate;
+
+            }
+
+            switch (currentState)
+            {
+                case States.GoTo:
+                    movementController.SetInput(0, 1);
+                    lookController.SetInput(Vector3.Angle(transform.forward, (transform.position - ((AGoTo)currentAction).GetDestination()).normalized), 0);
+
+                    if ((transform.position - ((AGoTo)currentAction).GetDestination()).sqrMagnitude < 2)
+                        StartNextAction();
+
+                    break;
+                case States.Animate:
+                    if (currentAction.GetType() != typeof(IConditionalAnimation)) break;
+
+                    if (!currentWorldState.MatchesState(((IConditionalAnimation)currentAction).GetCondition()))
+                        StartNextAction();
+
+                    break;
             }
         }
 
-        private List<Action> FindPath()
+        IEnumerator AnimationTimer(float time, System.Action function)
         {
-            StateNode startNode = new(currentState);
+            yield return new WaitForSeconds(time);
+
+            function();
+        }
+
+        private void StartNextAction()
+        {
+            if (currentPath.TryPop(out Action action))
+                currentAction = action;
+            else
+                currentAction = null;
+
+            if (currentAction?.GetType() == typeof(IAnimation))
+                animator.CrossFade(((IAnimation)currentAction).GetAnimationHash(), 0.1f);
+
+            if (currentAction?.GetType() == typeof(ITimedAnimation))
+                StartCoroutine(AnimationTimer(((ITimedAnimation)currentAction).GetDuration(), StartNextAction));
+            else if (currentAction?.GetType() != typeof(IConditionalAnimation))
+                StartCoroutine(AnimationTimer(animator.GetCurrentAnimatorStateInfo(0).length, StartNextAction));
+
+            if (currentAction?.GetType() == typeof(AGoTo))
+                currentState = States.GoTo;
+            else
+                currentState = States.Animate;
+        }
+
+        private Stack<Action> FindPath()
+        {
+            StateNode startNode = new(currentWorldState);
             startNode.parentNode = null;
             startNode.parentAction = null;
             startNode.gCost = 0;
-            startNode.hCost = FindHCost(currentState, goalState);
-
-            StateNode endNode = new(goalState);
+            startNode.hCost = FindHCost(currentWorldState, goalWorldState);
 
             List<StateNode> open = new();
             open.Add(startNode);
-
             List<StateNode> closed = new();
 
+            List<Action> usedActions = new();
             List<StateNode> allNodes = new();
-            allNodes.Add(startNode);
-            allNodes.Add(endNode);
 
             StateNode current;
-
-            int limiter = 0;
-
             while (open.Count > 0)
             {
-                limiter++;
-                if (limiter > 1000)
-                    return new();
-
                 current = open[0];
 
                 // Get cheapest
@@ -134,70 +189,69 @@ namespace Assets.Scripts.AI
                     return new();
 
                 // If found path
-                if (current.state.MatchesState(goalState))
+                if (current.state.MatchesState(goalWorldState))
                 {
-                    List<Action> path = new();
+                    Stack<Action> path = new();
 
                     while (current.parentAction != null)
                     {
-                        path.Add(current.parentAction);
+                        path.Push(current.parentAction);
 
                         current = current.parentNode;
                     }
 
-                    path.Reverse();
                     return path;
                 }
 
                 // Find connections
                 foreach (Action action in actions)
                 {
-                    foreach (Condition condition in action.preconditions.Conditions)
+                    if (current.state.MatchesState(action.GetPreconditions()))
                     {
-                        if (!currentState.ContainsCondition(condition)) continue;
-                        if (currentState.GetCondition(condition) != action.preconditions.GetCondition(condition)) continue;
-
                         StateNode newNode = new(WorldState.CombineStates(current.state, action.postconditions));
+                        newNode.parentAction = action;
 
-                        foreach (StateNode node in allNodes)
+                        if (usedActions.Contains(newNode.parentAction))
                         {
-                            if (node.state == newNode.state)
+                            foreach (StateNode node in allNodes)
                             {
-                                current.connections.Add(node);
-                                newNode = null;
-                                break;
+                                if (node.state == newNode.state)
+                                {
+                                    newNode = null;
+                                    break;
+                                }
                             }
                         }
 
                         if (newNode != null)
                         {
                             current.connections.Add(newNode);
+                            usedActions.Add(newNode.parentAction);
                             allNodes.Add(newNode);
                         }
-
-                        break;
                     }
                 }
 
-                // TODO: Add GoTo and UseObject to connections based on context
-
+                // Add connecting states that haven't been explored yet
                 foreach (StateNode connection in current.connections)
                 {
                     if (closed.Contains(connection)) continue;
 
-                    current.hCost = FindHCost(current.state, goalState);
+                    float cost = current.gCost + connection.parentAction.cost;
+
+                    current.hCost = FindHCost(current.state, goalWorldState);
 
                     bool openContainsNeighbor = open.Contains(connection);
 
                     // Adds each neighbor cheaper than current node to open set
-                    if (current.fCost < connection.gCost || !openContainsNeighbor)
+                    if (cost < connection.gCost || !openContainsNeighbor)
                     {
                         connection.gCost = current.fCost;
-                        connection.hCost = FindHCost(connection.state, goalState);
+                        connection.hCost = FindHCost(connection.state, goalWorldState);
                         connection.parentNode = current;
-                        connection.parentAction = GetConnectingAction(current.state, connection.state);
+                        connection.currentPosition = transform.position;
 
-                        if (!openContainsNeighbor && connection.parentAction != null)
+                        if (!openContainsNeighbor)
                             open.Add(connection);
                     }
                 }
@@ -210,6 +264,13 @@ namespace Assets.Scripts.AI
         {
             foreach (Action action in actions)
             {
+                AGoTo goToTemp;
+                if (action.GetType() == typeof(AGoTo))
+                {
+                    goToTemp = (AGoTo)action;
+                    goToTemp.SetStartPosition(transform.position);
+                }
+
                 if (current.MatchesState(action.preconditions) && goal.MatchesState(action.postconditions))
                     return action;
             }
@@ -226,10 +287,13 @@ namespace Assets.Scripts.AI
 
             foreach (Condition condition in goal.Conditions)
             {
-                if (!current.ContainsCondition(condition)) continue;
+                if (current.ContainsCondition(condition))
+                {
+                    if (current.GetCondition(condition) == goal.GetCondition(condition))
+                        continue;
+                }
 
-                if (current.GetCondition(condition) != goal.GetCondition(condition))
-                    cost++;
+                cost++;
             }
 
             return cost;
@@ -237,8 +301,15 @@ namespace Assets.Scripts.AI
 
         public void AddSmartObject(ISmartObject smartObject)
         {
-            actions.Add(new AUseObject(smartObject.GetPreconditions(), smartObject.GetPostconditions()));
-            actions.Add(new AGoTo(smartObject.GetTransform(), smartObject.GetPreconditions()));
+            WorldState precondition = smartObject.GetPreconditions();
+            precondition.SetCondition("nearObject" + smartObject.GetHashCode(), true);
+
+            WorldState postcondition = new WorldState(new());
+            postcondition.SetCondition("nearObject" + smartObject.GetHashCode(), true);
+
+            if (smartObject.GetType)
+            actions.Add(new AUseObject(precondition, smartObject.GetPostconditions(), smartObject.GetAnimationName()));
+            actions.Add(new AGoTo(smartObject.GetTransform(), postcondition));
         }
     }
 }

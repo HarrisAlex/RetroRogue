@@ -11,7 +11,7 @@ namespace Assets.Scripts.AI
 
         private AIController aiController;
 
-        private void Awake()
+        private void Start()
         {
             aiController = GetComponent<AIController>();
             foreach (ISmartObject smartObject in SmartObjectManager.GetSmartObjects(this))

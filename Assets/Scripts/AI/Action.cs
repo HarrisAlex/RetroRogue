@@ -1,11 +1,10 @@
 ﻿using System.Collections.Generic;
 using Assets.Scripts.AI;
-
 using UnityEngine;
 
 namespace Assets.Scripts.AI
 {
-    public class Action
+    public abstract class Action
     {
         public int cost;
         public WorldState preconditions;
@@ -18,11 +17,11 @@ namespace Assets.Scripts.AI
             postconditions = new(new());
         }
 
-        public Action(int cost, WorldState preConditions, WorldState postConditions)
+        public Action(int cost, WorldState preconditions, WorldState postconditions)
         {
             this.cost = cost;
-            this.preconditions = preConditions;
-            this.postconditions = postConditions;
+            this.preconditions = preconditions;
+            this.postconditions = postconditions;
         }
 
         public int GetCost()
@@ -41,6 +40,19 @@ namespace Assets.Scripts.AI
         }
     }
 
+    public enum TerminationType
+    {
+        Time,
+        Condition,
+        Animation
+    }
+
+    public interface IAnimatedAction
+    {
+        public int GetAnimationHash();
+        public TerminationType GetTerminationType();
+    }
+
     public class StateNode
     {
         public WorldState state { get; private set; }
@@ -51,6 +63,7 @@ namespace Assets.Scripts.AI
         public Action parentAction;
         public StateNode parentNode;
         public List<StateNode> connections;
+        public Vector3 currentPosition;
 
         public StateNode(WorldState state)
         {
@@ -84,22 +97,56 @@ namespace Assets.Scripts.AI
     public class AGoTo : Action
     {
         private Transform destination;
+        private Vector3 start;
+
         public AGoTo(Transform destination, WorldState postconditions)
         {
             this.destination = destination;
 
             this.postconditions = postconditions;
         }
+
+        public void SetStartPosition(Vector3 start)
+        {
+            this.start = start;
+            CalculateCost();
+        }
+
+        public Vector3 GetDestination()
+        {
+            return destination.position;
+        }
+
+        private void CalculateCost()
+        {
+            cost = Mathf.RoundToInt((start - destination.position).magnitude);
+        }
     }
 
-    public class AUseObject : Action
+    public class AUseObject : Action, IAnimatedAction
     {
-        public AUseObject(WorldState preconditions, WorldState postconditions)
+        private int animationHash;
+        private TerminationType terminationType;
+
+        public AUseObject(WorldState preconditions, WorldState postconditions, string animationName, TerminationType terminationType)
         {
             cost = 2;
 
             this.preconditions = preconditions;
             this.postconditions = postconditions;
+
+            animationHash = Animator.StringToHash(animationName);
+            this.terminationType = terminationType;
+        }
+
+        public int GetAnimationHash()
+        {
+            return animationHash;
+        }
+
+        public TerminationType GetTerminationType()
+        {
+            return terminationType;
         }
     }
 
@@ -120,8 +167,8 @@ namespace Assets.Scripts.AI
         {
             cost = 2;
             preconditions.SetCondition(Conditions.AWARE_OF_PLAYER, true);
+            preconditions.SetCondition(Conditions.CAN_SEE_PLAYER, false);
 
-            postconditions.SetCondition(Conditions.NEAR_PLAYER, true);
             postconditions.SetCondition(Conditions.CAN_SEE_PLAYER, true);
         }
     }

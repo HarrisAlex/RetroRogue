@@ -26,9 +26,9 @@ namespace Assets.Scripts.AI
 
         public bool ContainsCondition(Condition condition)
         {
-            for (int i = 0; i < Conditions.Count; i++)
+            foreach (Condition tmpCond in Conditions)
             {
-                if (Conditions[i].name == condition.name)
+                if (condition == tmpCond)
                     return true;
             }
 
@@ -37,12 +37,10 @@ namespace Assets.Scripts.AI
 
         public bool GetCondition(Condition condition)
         {
-            if (!ContainsCondition(condition)) return false;
-
-            for (int i = 0; i < Conditions.Count; i++)
+            foreach (Condition tmpCond in Conditions)
             {
-                if (Conditions[i].name == condition.name)
-                    return Conditions[i].value;
+                if (condition == tmpCond)
+                    return tmpCond.value;
             }
 
             return false;
@@ -74,6 +72,15 @@ namespace Assets.Scripts.AI
 
                 if (GetCondition(condition) != state.GetCondition(condition)) return false;
             }
+
+            return true;
+        }
+
+        public bool MatchesState(Condition condition)
+        {
+            if (!ContainsCondition(condition)) return false;
+
+            if (GetCondition(condition) != condition.value) return false;
 
             return true;
         }
@@ -132,12 +139,36 @@ namespace Assets.Scripts.AI
     public struct Condition
     {
         public string name;
+
         public bool value;
 
         public Condition(string name, bool value)
         {
             this.name = name;
             this.value = value;
+        }
+
+        public static bool operator ==(Condition a, Condition b)
+        {
+            return a.name == b.name;
+        }
+
+        public static bool operator !=(Condition a, Condition b)
+        {
+            return a.name != b.name;
+        }
+
+        public override bool Equals(object o)
+        {
+            if (o.GetType() != typeof(Condition))
+                return false;
+
+            return this == (Condition)o;
+        }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
         }
     }
 
