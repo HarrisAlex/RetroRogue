@@ -10,6 +10,12 @@ public class ItemPickup : MonoBehaviour, IInteractable, ISmartObject
     [SerializeField] private List<Condition> preconditions;
     [SerializeField] private List<Condition> postconditions;
 
+    [Header("Animation settings")]
+    [SerializeField] private TerminationType terminationType;
+    [SerializeField] private string animationName;
+    [SerializeField] private float animationDuration;
+    [SerializeField] private Condition terminationCondition;
+
     public WorldState GetPostconditions()
     {
         return new(postconditions);
@@ -40,23 +46,29 @@ public class ItemPickup : MonoBehaviour, IInteractable, ISmartObject
         return result;
     }
 
-    public string GetAnimationName()
-    {
-        return "Pick Up";
-    }
 
     public void Interact()
     {
         throw new System.NotImplementedException();
     }
 
+    public TerminationType GetAnimationTerminationType()
+    {
+        return terminationType;
+    }
+
+    public string GetAnimationName()
+    {
+        return animationName;
+    }
+
     public float GetAnimationDuration()
     {
-        return 0;
+        return animationDuration;
     }
 
     public Condition GetAnimationCondition()
     {
-        return new Condition("", false);
+        return terminationCondition;
     }
 }

@@ -25,7 +25,8 @@ namespace Assets.Scripts.AI
         private WorldState goalWorldState;
 
         private Stack<Action> currentPath;
-        private Action currentAction;
+        private ActionReference currentAction;
+        private IAnimatedAction currentAnimation;
 
         // Navigation
         private Vector3 destination = Vector3.zero;
@@ -37,6 +38,24 @@ namespace Assets.Scripts.AI
             Animate
         }
         private States currentState;
+
+        public class ActionReference
+        {
+            public readonly Action action;
+            public readonly AGoTo goTo;
+            public readonly IAnimatedAction animation;
+
+            public ActionReference(Action action)
+            {
+                this.action = action;
+
+                if (action.GetType().GetInterface("IAnimatedAction") == typeof(IAnimatedAction))
+                    animation = (IAnimatedAction)action;
+
+                if (action.GetType() == typeof(AGoTo))
+                    goTo = (AGoTo)action;
+            }
+        }
 
         private void Awake()
         {
@@ -76,46 +95,40 @@ namespace Assets.Scripts.AI
 
         private void Update()
         {
-            movementController.SetInput(destination.x - transform.position.x, destination.z - transform.position.z);
-            lookController.SetInput(Vector3.Angle(transform.forward, (destination - transform.position).normalized), 0);
-
             if (currentWorldState == goalWorldState) return;
 
             if (currentPath.Count < 1)
             {
                 currentPath = FindPath();
                 currentAction = null;
-                return;
             }
+
+            if (currentPath == null) return;
 
             if (currentAction == null)
             {
-                currentAction = currentPath.Pop();
+                StartNextAction();
 
-                if (currentAction.GetType() == typeof(AGoTo))
-                    currentState = States.GoTo;
-                else
-                    currentState = States.Animate;
-
+                return;
             }
 
-            switch (currentState)
+            movementController.SetInput(0, 0);
+            lookController.SetInput(0, 0);
+
+            if (currentAction.goTo != null)
             {
-                case States.GoTo:
-                    movementController.SetInput(0, 1);
-                    lookController.SetInput(Vector3.Angle(transform.forward, (transform.position - ((AGoTo)currentAction).GetDestination()).normalized), 0);
+                movementController.SetInput(0, 1);
+                lookController.SetInput(Vector3.Angle(transform.forward, (currentAction.goTo.GetDestination() - transform.position).normalized) * Time.smoothDeltaTime, 0);
 
-                    if ((transform.position - ((AGoTo)currentAction).GetDestination()).sqrMagnitude < 2)
+                if ((transform.position - currentAction.goTo.GetDestination()).sqrMagnitude < 2)
+                    StartNextAction();
+            }
+
+            if (currentAction.animation != null)
+            {
+                if (currentAction.animation.GetTerminationType() == TerminationType.Condition)
+                    if (currentWorldState.MatchesState((Condition)currentAction.animation.GetTerminator()))
                         StartNextAction();
-
-                    break;
-                case States.Animate:
-                    if (currentAction.GetType() != typeof(IConditionalAnimation)) break;
-
-                    if (!currentWorldState.MatchesState(((IConditionalAnimation)currentAction).GetCondition()))
-                        StartNextAction();
-
-                    break;
             }
         }
 
@@ -129,19 +142,35 @@ namespace Assets.Scripts.AI
         private void StartNextAction()
         {
             if (currentPath.TryPop(out Action action))
-                currentAction = action;
+                currentAction = new(action);
             else
+            {
                 currentAction = null;
+                currentPath = null;
 
-            if (currentAction?.GetType() == typeof(IAnimation))
-                animator.CrossFade(((IAnimation)currentAction).GetAnimationHash(), 0.1f);
+                return;
+            }
 
-            if (currentAction?.GetType() == typeof(ITimedAnimation))
-                StartCoroutine(AnimationTimer(((ITimedAnimation)currentAction).GetDuration(), StartNextAction));
-            else if (currentAction?.GetType() != typeof(IConditionalAnimation))
-                StartCoroutine(AnimationTimer(animator.GetCurrentAnimatorStateInfo(0).length, StartNextAction));
+            if (currentAction.animation != null)
+            {
+                animator.CrossFade(currentAction.animation.GetAnimationHash(), 0.1f);
 
-            if (currentAction?.GetType() == typeof(AGoTo))
+                if (currentAction.animation.GetTerminationType() == TerminationType.Time)
+                    StartCoroutine(AnimationTimer((float)currentAction.animation.GetTerminator(), StartNextAction));
+                else if (currentAction.animation.GetTerminationType() == TerminationType.Animation)
+                {
+                    foreach (AnimationClip clip in animator.runtimeAnimatorController.animationClips)
+                    {
+                        if (Animator.StringToHash(clip.name) == currentAction.animation.GetAnimationHash())
+                        {
+                            StartCoroutine(AnimationTimer(clip.length, StartNextAction));
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (currentAction.action.GetType() == typeof(AGoTo))
                 currentState = States.GoTo;
             else
                 currentState = States.Animate;
@@ -307,8 +336,21 @@ namespace Assets.Scripts.AI
             WorldState postcondition = new WorldState(new());
             postcondition.SetCondition("nearObject" + smartObject.GetHashCode(), true);
 
-            if (smartObject.GetType)
-            actions.Add(new AUseObject(precondition, smartObject.GetPostconditions(), smartObject.GetAnimationName()));
+            AUseObject useObject;
+            switch (smartObject.GetAnimationTerminationType())
+            {
+                case TerminationType.Time:
+                    useObject = new(precondition, smartObject.GetPostconditions(), smartObject.GetAnimationName(), smartObject.GetAnimationDuration());
+                    break;
+                case TerminationType.Condition:
+                    useObject = new(precondition, smartObject.GetPostconditions(), smartObject.GetAnimationName(), smartObject.GetAnimationCondition());
+                    break;
+                default:
+                    useObject = new(precondition, smartObject.GetPostconditions(), smartObject.GetAnimationName());
+                    break;
+            }
+
+            actions.Add(useObject);
             actions.Add(new AGoTo(smartObject.GetTransform(), postcondition));
         }
     }

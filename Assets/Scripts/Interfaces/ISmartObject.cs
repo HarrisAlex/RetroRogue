@@ -9,6 +9,7 @@ public interface ISmartObject
     public WorldState GetPreconditions();
     public WorldState GetPostconditions();
     public Transform GetTransform();
+    public TerminationType GetAnimationTerminationType();
     public string GetAnimationName();
     public float GetAnimationDuration();
     public Condition GetAnimationCondition();

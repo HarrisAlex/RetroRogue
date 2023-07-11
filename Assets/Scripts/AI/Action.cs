@@ -51,6 +51,7 @@ namespace Assets.Scripts.AI
     {
         public int GetAnimationHash();
         public TerminationType GetTerminationType();
+        public object GetTerminator();
     }
 
     public class StateNode
@@ -128,7 +129,9 @@ namespace Assets.Scripts.AI
         private int animationHash;
         private TerminationType terminationType;
 
-        public AUseObject(WorldState preconditions, WorldState postconditions, string animationName, TerminationType terminationType)
+        private object terminator;
+
+        public AUseObject(WorldState preconditions, WorldState postconditions, string animationName)
         {
             cost = 2;
 
@@ -136,7 +139,31 @@ namespace Assets.Scripts.AI
             this.postconditions = postconditions;
 
             animationHash = Animator.StringToHash(animationName);
-            this.terminationType = terminationType;
+            terminationType = TerminationType.Animation;
+        }
+
+        public AUseObject(WorldState preconditions, WorldState postconditions, string animationName, float duration)
+        {
+            cost = 2;
+
+            this.preconditions = preconditions;
+            this.postconditions = postconditions;
+
+            animationHash = Animator.StringToHash(animationName);
+            terminationType = TerminationType.Time;
+            terminator = duration;
+        }
+
+        public AUseObject(WorldState preconditions, WorldState postconditions, string animationName, Condition condition)
+        {
+            cost = 2;
+
+            this.preconditions = preconditions;
+            this.postconditions = postconditions;
+
+            animationHash = Animator.StringToHash(animationName);
+            terminationType = TerminationType.Condition;
+            terminator = condition;
         }
 
         public int GetAnimationHash()
@@ -147,6 +174,11 @@ namespace Assets.Scripts.AI
         public TerminationType GetTerminationType()
         {
             return terminationType;
+        }
+
+        public object GetTerminator()
+        {
+            return terminator;
         }
     }
 
