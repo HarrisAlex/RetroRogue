@@ -12,16 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 11dc3bfce950a6847804355972c88b15, type: 3}
   m_Name: Default Generation Settings
   m_EditorClassIdentifier: 
-  roomCount: 80
-  gridWidth: 256
-  gridHeight: 256
+  roomCount: 3
+  gridWidth: 128
+  gridHeight: 128
   maxRoomWidth: 25
   maxRoomHeight: 25
   minRoomWidth: 7
   minRoomHeight: 7
   maxRoomAttempts: 5
-  hallwayExpansion: 1
+  hallwayExpansion: 0
   extraHallwayGenerationChance: 10
-  floorMaterial: {fileID: 2100000, guid: c06c2ce82be9f1d44abf50a55ed09bf4, type: 2}
-  ceilingMaterial: {fileID: 2100000, guid: ba754d077c89ec94bbfa0106a4db17da, type: 2}
-  wallMaterial: {fileID: 0}

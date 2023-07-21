@@ -13,16 +13,16 @@ namespace Assets.Scripts.AI
         public readonly LookController lookController;
         public readonly Animator animator;
         public readonly AIController aiController;
-        public readonly Navigation navigation;
+        public readonly Pathfinding<Vertex> pathfinder;
 
-        public ActionInput(Transform playerTransform, MovementController movementController, LookController lookController, Animator animator, AIController aiController, Navigation navigation)
+        public ActionInput(Transform playerTransform, MovementController movementController, LookController lookController, Animator animator, AIController aiController, Pathfinding<Vertex> pathfinder)
         {
             this.playerTransform = playerTransform;
             this.movementController = movementController;
             this.lookController = lookController;
             this.animator = animator;
             this.aiController = aiController;
-            this.navigation = navigation;
+            this.pathfinder = pathfinder;
         }
     }
 
@@ -117,7 +117,7 @@ namespace Assets.Scripts.AI
         private Transform destination;
         private Vector3 start;
 
-        private List<Vertex> path;
+        private List<Node<Vertex>> path;
         private int current;
 
         public AGoTo(Transform destination, WorldState postconditions)
@@ -147,7 +147,7 @@ namespace Assets.Scripts.AI
         {
             if (path == null)
             {
-                path = input.navigation.FindPath(Vertex.VectorToVertex(input.playerTransform.position), Vertex.VectorToVertex(destination.position));
+                path = input.pathfinder.FindPath(Vertex.VectorToVertex(input.playerTransform.position), Vertex.VectorToVertex(destination.position));
                 current = 0;
 
                 if (path.Count < 1)
@@ -158,9 +158,9 @@ namespace Assets.Scripts.AI
             }
 
             input.movementController.SetInput(0, 1);
-            input.lookController.SetInput(new Vector3(path[current].x, 0, path[current].y));
+            input.lookController.SetInput(new Vector3(path[current].position.x, 0, path[current].position.y));
 
-            if ((input.playerTransform.position - new Vector3(path[current].x, 0, path[current].y)).sqrMagnitude < 0.01f)
+            if ((input.playerTransform.position - new Vector3(path[current].position.x, 0, path[current].position.y)).sqrMagnitude < 0.01f)
             {
                 current++;
 

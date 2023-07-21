@@ -94,6 +94,14 @@ namespace Assets.Scripts.Generation
                 }
             }
 
+            public float Slope
+            {
+                get
+                {
+                    return (v.y - u.y) / (v.x - u.x);
+                }
+            }
+
             public Edge(Vertex u, Vertex v)
             {
                 this.u = u;
@@ -104,6 +112,23 @@ namespace Assets.Scripts.Generation
             {
                 return Approximately(left.u, right.u) && Approximately(left.v, right.v)
                     || Approximately(left.u, right.v) && Approximately(left.v, right.u);
+            }
+
+            public Vertex FindIntersection(Edge edge)
+            {
+                // Parallel lines
+                if (Approximately(Slope, edge.Slope))
+                    return Vertex.NegativeInfinity;
+
+                float xIntersection = (edge.u.x - u.x) / (Slope - edge.Slope);
+                float yIntersection = Slope * xIntersection + u.x;
+
+                return new(xIntersection, yIntersection);
+            }
+
+            public bool PointIsOnEdge(Vertex vertex)
+            {
+                return Approximately(Distance(vertex, u) + Distance(vertex, v), Length);
             }
         }
 
@@ -155,14 +180,18 @@ namespace Assets.Scripts.Generation
         public class Dungeon
         {
             public readonly Vertex spawn;
-            public readonly Navigation navigation;
+            public readonly Pathfinding<Vertex> pathfinding;
 
-            private readonly TileType[,] grid;
-            private readonly GenerationSettings settings;
+            public readonly TileType[,] grid;
+            public readonly GenerationSettings settings;
+            public readonly HashSet<Edge> edges;
+            public readonly List<Room> rooms;
 
-            public Dungeon(TileType[,] grid, HashSet<Edge> edges, GenerationSettings settings, Random random)
+            public Dungeon(TileType[,] grid, HashSet<Edge> edges, GenerationSettings settings, Random random, List<Room> rooms)
             {
                 this.grid = grid;
+                this.edges = edges;
+                this.rooms = rooms;
 
                 List<Vertex> vertices = new();
                 foreach (Edge edge in edges)
@@ -176,16 +205,58 @@ namespace Assets.Scripts.Generation
                 spawn = vertices[random.Next(0, vertices.Count - 1)];
 
                 // Create nodes for floor tiles
-                Node[,] nodes = new Node[settings.gridWidth, settings.gridHeight];
-                IterateArea(0, 0, settings.gridWidth - 1, settings.gridHeight - 1, (int x, int y) =>
-                {
-                    if (IsFloor(grid[x, y]))
-                        nodes[x, y] = new(x, y);
-                    else
-                        nodes[x, y] = null;
-                });
+                List<Node<Vertex>> nodes = new();
 
-                navigation = new Navigation(nodes);
+                Vertex intersection;
+                foreach (Edge edge in edges)
+                {
+                    foreach (Room room in rooms)
+                    {
+                        foreach (Edge roomEdge in room.GetEdges())
+                        {
+                            intersection = edge.FindIntersection(roomEdge);
+                            if (Approximately(intersection, Vertex.NegativeInfinity)) continue;
+
+                            nodes.Add(new(intersection));
+                        }
+                    }
+                }
+
+                foreach (Node<Vertex> node in nodes)
+                {
+                    DungeonDebug.DrawRectangle(node.position.x, node.position.y, 1, 1, 500, UnityEngine.Color.red);
+                }
+
+                //// Add neighbors by room
+                //foreach (Node<Vertex> node in nodes)
+                //{
+                //    foreach (Node<Vertex> neighbor in nodes)
+                //    {
+                //        foreach (Room room in rooms)
+                //        {
+                //            if (room.ContainsPoint(node.position) && room.ContainsPoint(neighbor.position))
+                //            {
+                //                node.neighbors.Add(neighbor);
+                //            }
+                //        }
+                //    }
+                //}
+
+                //// Add neighbors by edge sharing
+                //foreach (Node<Vertex> node in nodes)
+                //{
+                //    foreach (Node<Vertex> neighbor in nodes)
+                //    {
+                //        foreach (Edge edge in edges)
+                //        {
+                //            if (!edge.PointIsOnEdge(neighbor.position)) continue;
+
+                //            node.neighbors.Add(neighbor);
+                //        }
+                //    }
+                //}
+
+                pathfinding = new(nodes);
 
                 this.settings = settings;
             }
@@ -220,6 +291,36 @@ namespace Assets.Scripts.Generation
         public static float Distance(Vertex v1, Vertex v2)
         {
             return MathF.Sqrt(MathF.Pow(v1.x - v2.x, 2) + MathF.Pow(v1.y - v2.y, 2));
+        }
+
+        public static float Distance(object a, object b)
+        {
+            Type aType = a.GetType();
+            Type bType = b.GetType();
+
+            if (aType == typeof(Vertex) && bType == typeof(Vertex))
+            {
+                return Distance((Vertex)a, (Vertex)b);
+            }
+
+            if (aType == typeof(Coordinate) && bType == typeof(Coordinate))
+            {
+                return Distance((Coordinate)a, (Coordinate)b);
+            }
+
+            if (aType == typeof(Vertex) && bType == typeof(Coordinate))
+            {
+                Coordinate bCoord = (Coordinate)b;
+                return Distance(a, new Vertex(bCoord.x, bCoord.y));
+            }
+
+            if (aType == typeof(Coordinate) && bType == typeof(Vertex))
+            {
+                Coordinate aCoord = (Coordinate)a;
+                return Distance(new Vertex(aCoord.x, aCoord.y), b);
+            }
+
+            return -1;
         }
 
         public static float SquareDistance(Vertex v1, Vertex v2)

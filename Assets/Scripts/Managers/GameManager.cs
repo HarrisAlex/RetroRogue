@@ -2,7 +2,6 @@ using UnityEngine;
 using Assets.Scripts.Generation;
 using System;
 using static Assets.Scripts.Generation.DungeonGeneration;
-using Assets.Scripts.AI;
 
 [RequireComponent(typeof(DungeonRenderer))]
 public class GameManager : MonoBehaviour
@@ -46,7 +45,7 @@ public class GameManager : MonoBehaviour
 
         // Generate dungeon
         dungeonGenerator = new DungeonGenerator(dungeonSettings);
-        dungeon = dungeonGenerator.Generate((int)DateTime.Now.Ticks);
+        dungeon = dungeonGenerator.Generate(0);
 
         // Render dungeon
         playerSpawnPosition = dungeonRenderer.RenderDungeon(dungeon);

@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using static Assets.Scripts.Generation.DungeonGeneration;
 
-public class Node
+public class Node<T>
 {
-    public Coordinate position;
-    public Node parent;
+    public T position;
+    public List<Node<T>> neighbors;
+    public Node<T> parent;
     public float gCost;
     public float hCost;
 
@@ -14,41 +15,44 @@ public class Node
         get { return gCost + hCost; }
     }
 
-    public Node(int x, int y)
+    public Node(T position)
     {
-        position = new Coordinate(x, y);
+        this.position = position;
+        neighbors = new();
     }
 }
 
-public class Navigation
+public class Pathfinding<T>
 {
-    private Node[,] nodes;
+    private List<Node<T>> nodes;
 
-    public Navigation(Node[,] nodes)
+    public Pathfinding(List<Node<T>> nodes)
     {
         this.nodes = nodes;
     }
 
-    public List<Vertex> FindPath(Vertex start, Vertex end)
+    public List<Node<T>> FindPath(T start, T end)
     {
+        if (typeof(T) != typeof(Vertex) && typeof(T) != typeof(Coordinate)) return new();
+
         // Check that nodes can be found
-        Node startNode = FindNearestNode(start);
+        Node<T> startNode = FindNearestNode(start);
         if (startNode == null) return new();
 
-        Node endNode = FindNearestNode(end);
+        Node<T> endNode = FindNearestNode(end);
         if (endNode == null) return new();
 
         // Create open list for A*
-        List<Node> open = new();
+        List<Node<T>> open = new();
         open.Add(startNode);
 
-        HashSet<Node> closed = new();
+        HashSet<Node<T>> closed = new();
 
         while (open.Count > 0)
         {
-            Node current = open[0];
+            Node<T> current = open[0];
 
-            Node closest;
+            Node<T> closest;
             for (int i = 1; i < open.Count; i++)
             {
                 closest = open[i];
@@ -65,12 +69,12 @@ public class Navigation
             // Return if path has been found
             if (current == endNode)
             {
-                List<Vertex> path = new();
-                Node tmp = endNode;
+                List<Node<T>> path = new();
+                Node<T> tmp = endNode;
 
                 while (tmp != startNode)
                 {
-                    path.Add(new(tmp.position.x + 0.5f, tmp.position.y + 0.5f));
+                    path.Add(tmp);
                     tmp = tmp.parent;
                 }
 
@@ -79,19 +83,9 @@ public class Navigation
                 return path;
             }
 
-            int checkX, checkY;
-            IterateArea(-1, -1, 1, 1, (int x, int y) =>
+            foreach (Node<T> neighbor in current.neighbors)
             {
-                checkX = current.position.x + x;
-                checkY = current.position.y + y;
-
-                if (checkX < 0 || checkY < 0 || checkX >= nodes.GetLength(0) || checkY >= nodes.GetLength(1)) return;
-                if (x == 0 && y == 0) return;
-                if (nodes[checkX, checkY] == null) return;
-
-                Node neighbor = nodes[checkX, checkY];
-
-                if (closed.Contains(neighbor)) return;
+                if (closed.Contains(neighbor)) continue;
 
                 float cost = current.gCost + Distance(current.position, neighbor.position);
 
@@ -107,19 +101,36 @@ public class Navigation
                     if (!openContainsNeighbor)
                         open.Add(neighbor);
                 }
-            });
+            }
         }
 
         return new();
     }
 
-    private Node FindNearestNode(Vertex vertex)
+    private Node<T> FindNearestNode(T position)
     {
         if (nodes == null) return null;
-        if (nodes.Length < 1) return null;
+        if (nodes.Count < 1) return null;
 
-        if (vertex.x < 0 || vertex.y < 0 || vertex.x >= nodes.GetLength(0) || vertex.y >= nodes.GetLength(1)) return null;
+        int closest = -1;
+        float distance, closestDistance = float.MaxValue;
+        for (int i = 0; i < nodes.Count; i++)
+        {
+            distance = Distance(position, nodes[i].position);
 
-        return nodes[(int)vertex.x, (int)vertex.y];
+            if (distance < 0)
+                continue;
+
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+                closest = i;
+            }
+        }
+
+        if (closest < 0)
+            return null;
+
+        return nodes[closest];
     }
 }

@@ -78,7 +78,7 @@ namespace Assets.Scripts.AI
 
             if (currentAction == null) return;
 
-            currentAction.Run(new ActionInput(transform, movementController, lookController, animator, this, GameManager.dungeon.navigation), () =>
+            currentAction.Run(new ActionInput(transform, movementController, lookController, animator, this, GameManager.dungeon.pathfinding), () =>
             {
                 foreach (Condition condition in currentAction.postconditions.Conditions)
                 {

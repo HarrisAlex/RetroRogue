@@ -48,18 +48,34 @@ namespace Assets.Scripts.Generation
             return xPosition + width < gridWidth || yPosition + height < gridHeight;
         }
 
-        public static bool RoomsIntersect(Room room1, Room room2, int spacing)
+        public static bool RoomsIntersect(Room room1, Room room2)
         {
-            return !((room1.xPosition - spacing >= (room2.xPosition + room2.width + spacing))
-                || ((room1.xPosition + room1.width + spacing) <= room2.xPosition - spacing)
-                || (room1.yPosition - spacing >= (room2.yPosition + room2.height + spacing))
-                || ((room1.yPosition + room1.height + spacing) <= room2.yPosition - spacing));
+            return !((room1.xPosition >= (room2.xPosition + room2.width))
+                || ((room1.xPosition + room1.width) <= room2.xPosition)
+                || (room1.yPosition >= (room2.yPosition + room2.height))
+                || ((room1.yPosition + room1.height) <= room2.yPosition));
         }
 
         public bool ContainsPoint(Vertex vertex)
         {
             return (vertex.x >= xPosition && vertex.x <= xPosition + width
                 && vertex.y >= yPosition && vertex.y <= yPosition + height);
+        }
+
+        public List<Edge> GetEdges()
+        {
+            Vertex bottomLeft = new(xPosition, yPosition);
+            Vertex bottomRight = new(xPosition + width, yPosition);
+            Vertex topLeft = new(xPosition, yPosition + height);
+            Vertex topRight = new(xPosition + width, yPosition + height);
+
+            List<Edge> edges = new();
+            edges.Add(new(bottomLeft, topLeft));
+            edges.Add(new(topLeft, topRight));
+            edges.Add(new(topRight, bottomRight));
+            edges.Add(new(bottomRight, bottomLeft));
+
+            return edges;
         }
     }
 
@@ -122,35 +138,37 @@ namespace Assets.Scripts.Generation
 
             closedSet.Add(edges[0].u);
 
-            // Find minimum spanning tree
+            // Find minimum spanning tree (Kruskal's)
+            Edge chosenEdge;
+            float minWeight;
+
             while (openSet.Count > 0)
             {
-                bool chosen = false;
-                Edge chosenEdge = null;
-                float minWeight = float.PositiveInfinity;
+                chosenEdge = null;
+                minWeight = float.PositiveInfinity;
 
+                // Find shortest unexplored edge that shares a vertex with an explored edge and another vertex with an unexplored edge
                 foreach (Edge edge in edges)
                 {
-                    int closedVertices = 0;
+                    int exploredVertices = 0;
 
                     if (!closedSet.Contains(edge.u))
-                        closedVertices++;
+                        exploredVertices++;
 
                     if (!closedSet.Contains(edge.v))
-                        closedVertices++;
+                        exploredVertices++;
 
-                    if (closedVertices != 1)
+                    if (exploredVertices != 1)
                         continue;
 
                     if (edge.Length < minWeight)
                     {
                         chosenEdge = edge;
-                        chosen = true;
                         minWeight = edge.Length;
                     }
                 }
 
-                if (!chosen)
+                if (chosenEdge == null)
                     break;
 
                 selectedEdges.Add(chosenEdge);
@@ -172,33 +190,62 @@ namespace Assets.Scripts.Generation
             }
 
             // Initialize nodes for pathfinding hallways
-            Node[,] nodes = new Node[Settings.gridWidth, Settings.gridHeight];
+            Node<Coordinate>[,] nodesArray = new Node<Coordinate>[Settings.gridWidth, Settings.gridHeight];
             IterateArea(0, 0, Settings.gridWidth - 1, Settings.gridHeight - 1, (int x, int y) =>
             {
                 if (TryGetCoordinate(x, y, out TileType type))
-                    nodes[x, y] = new(x, y);
+                    nodesArray[x, y] = new(new Coordinate(x, y));
                 else
-                    nodes[x, y] = null;
+                    nodesArray[x, y] = null;
             });
 
-            Navigation navigation = new Navigation(nodes);
+            // Find neighbors
+            foreach (Node<Coordinate> node in nodesArray)
+            {
+                List<Node<Coordinate>> neighbors = new();
+
+                int checkX, checkY;
+                IterateArea(-1, -1, 1, 1, (int x, int y) =>
+                {
+                    if (x == 0 && y == 0) return;
+
+                    checkX = node.position.x + x;
+                    checkY = node.position.y + y;
+
+                    if (TryGetNode(nodesArray, checkX, checkY, out Node<Coordinate> neighbor))
+                        neighbors.Add(neighbor);
+                });
+
+                node.neighbors = neighbors;
+            }
+
+            List<Node<Coordinate>> nodes = new();
+
+            foreach (Node<Coordinate> node in nodesArray)
+                nodes.Add(node);
+
+            Pathfinding<Coordinate> hallwayPathfinder = new(new List<Node<Coordinate>>(nodes));
 
             // Pathfind and fill hallways
             foreach (Edge edge in selectedEdges)
             {
-                List<Vertex> path = navigation.FindPath(edge.u, edge.v);
+                List<Node<Coordinate>> path = hallwayPathfinder.FindPath(edge.u.ToCoordinate(), edge.v.ToCoordinate());
 
-                if (path == null) continue;
+                if (path == null)
+                    continue;
 
-                foreach (Vertex coordinate in path)
+                foreach (Node<Coordinate> coordinate in path)
                 {
-                    FillArea((int)coordinate.x - Settings.hallwayExpansion,
-                        (int)coordinate.y - Settings.hallwayExpansion,
-                        (int)coordinate.x + Settings.hallwayExpansion,
-                        (int)coordinate.y + Settings.hallwayExpansion,
+                    FillArea(coordinate.position.x - Settings.hallwayExpansion,
+                        coordinate.position.y - Settings.hallwayExpansion,
+                        coordinate.position.x + Settings.hallwayExpansion,
+                        coordinate.position.y + Settings.hallwayExpansion,
                         TileType.HallwayFloor, IsVoid
                         );
                 }
+
+                var customers = new Dictionary<float, int>();
+                Dictionary<float, int> customerb = new();
             }
 
             // Add walls
@@ -221,7 +268,7 @@ namespace Assets.Scripts.Generation
                     room.lights.Add(room.GetCenter());
             }
 
-            Dungeon dungeon = new(grid, selectedEdges, Settings, random);
+            Dungeon dungeon = new(grid, selectedEdges, Settings, random, rooms);
 
 #if UNITY_EDITOR
             if (DungeonDebug.instance != null)
@@ -241,8 +288,8 @@ namespace Assets.Scripts.Generation
             while (newRoom == null && attempts < Settings.maxRoomAttempts)
             {
                 newRoom = new Room(
-                    random.Next(Settings.minRoomWidth, Settings.gridWidth - Settings.maxRoomWidth),
-                    random.Next(Settings.minRoomHeight, Settings.gridHeight - Settings.maxRoomHeight),
+                    random.Next(0, Settings.gridWidth - Settings.maxRoomWidth),
+                    random.Next(0, Settings.gridHeight - Settings.maxRoomHeight),
                     random.Next(Settings.minRoomWidth, Settings.maxRoomWidth + 1),
                     random.Next(Settings.minRoomHeight, Settings.maxRoomHeight + 1)
                     );
@@ -259,7 +306,7 @@ namespace Assets.Scripts.Generation
                 // Check for intersection with other rooms
                 foreach (Room room in rooms)
                 {
-                    if (Room.RoomsIntersect(room, newRoom, 0))
+                    if (Room.RoomsIntersect(room, newRoom))
                     {
                         attempts++;
                         newRoom = null;
@@ -376,28 +423,9 @@ namespace Assets.Scripts.Generation
             }
         }
 
-        private List<Node> FindNeighbors(Node[,] nodes, Node node)
-        {
-            List<Node> result = new();
-
-            int checkX, checkY;
-            IterateArea(-1, -1, 1, 1, (int x, int y) =>
-            {
-                if (x == 0 && y == 0) return;
-
-                checkX = (int)node.position.x + x;
-                checkY = (int)node.position.y + y;
-
-                if (TryGetNode(nodes, checkX, checkY, out Node neighbor))
-                    result.Add(neighbor);
-            });
-
-            return result;
-        }
-
         #region Functions for Getting Nodes
 
-        private bool TryGetNode(Node[,] nodes, int x, int y, out Node node)
+        private bool TryGetNode(Node<Coordinate>[,] nodes, int x, int y, out Node<Coordinate> node)
         {
             if (WithinGrid(x, y))
                 node = nodes[x, y];
@@ -490,64 +518,92 @@ namespace Assets.Scripts.Generation
         {
             if (!IsCorner(x, y)) return false;
 
-            Coordinate left = new(x - 1, y);
+            Coordinate bottomRight = new(x + 1, y - 1);
             Coordinate top = new(x, y + 1);
+            Coordinate left = new(x - 1, y);
 
             if (TryGetCoordinate(top, out TileType tile1) && TryGetCoordinate(left, out TileType tile2))
             {
-                if (tile1 == TileType.Wall && tile2 == TileType.Wall)
-                    return true;
+                if (tile1 != TileType.Wall || tile2 != TileType.Wall)
+                    return false;
             }
 
-            return false;
+            if (TryGetCoordinate(bottomRight, out TileType tile3))
+            {
+                if (!IsWall(tile3))
+                    return false;
+            }
+
+            return true;
         }
 
         private bool IsTopRightCorner(int x, int y)
         {
             if (!IsCorner(x, y)) return false;
 
-            Coordinate right = new(x + 1, y);
+            Coordinate bottomLeft = new(x - 1, y - 1);
             Coordinate top = new(x, y + 1);
+            Coordinate right = new(x + 1, y);
 
             if (TryGetCoordinate(top, out TileType tile1) && TryGetCoordinate(right, out TileType tile2))
             {
-                if (tile1 == TileType.Wall && tile2 == TileType.Wall)
-                    return true;
+                if (tile1 != TileType.Wall || tile2 != TileType.Wall)
+                    return false;
             }
 
-            return false;
+            if (TryGetCoordinate(bottomLeft, out TileType tile3))
+            {
+                if (!IsWall(tile3))
+                    return false;
+            }
+
+            return true;
         }
 
         private bool IsBottomLeftCorner(int x, int y)
         {
             if (!IsCorner(x, y)) return false;
 
-            Coordinate left = new(x - 1, y);
+            Coordinate topRight = new(x + 1, y + 1);
             Coordinate bottom = new(x, y - 1);
+            Coordinate left = new(x - 1, y);
 
             if (TryGetCoordinate(bottom, out TileType tile1) && TryGetCoordinate(left, out TileType tile2))
             {
-                if (tile1 == TileType.Wall && tile2 == TileType.Wall)
-                    return true;
+                if (!IsWall(tile1) || !IsWall(tile2))
+                    return false;
             }
 
-            return false;
+            if (TryGetCoordinate(topRight, out TileType tile3))
+            {
+                if (!IsWall(tile3))
+                    return false;
+            }
+
+            return true;
         }
 
         private bool IsBottomRightCorner(int x, int y)
         {
             if (!IsCorner(x, y)) return false;
 
+            Coordinate topLeft = new(x - 1, y + 1);
             Coordinate right = new(x + 1, y);
             Coordinate bottom = new(x, y - 1);
 
             if (TryGetCoordinate(bottom, out TileType tile1) && TryGetCoordinate(right, out TileType tile2))
             {
-                if (tile1 == TileType.Wall && tile2 == TileType.Wall)
-                    return true;
+                if (!IsWall(tile1) || !IsWall(tile2))
+                    return false;
             }
 
-            return false;
+            if (TryGetCoordinate(topLeft, out TileType tile3))
+            {
+                if (!IsWall(tile3))
+                    return false;
+            }
+
+            return true;
         }
 
         #endregion
@@ -586,7 +642,7 @@ namespace Assets.Scripts.Generation
         private bool IsCorner(int x, int y)
         {
             if (!WithinGrid(x, y)) return false;
-            if (GetCoordinate(x, y) != TileType.HallwayFloor) return false;
+            if (!IsWall(GetCoordinate(x, y))) return false;
 
             return true;
         }
