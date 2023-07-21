@@ -22,6 +22,16 @@ namespace Assets.Scripts.Generation
                 this.y = y;
             }
 
+            public static Vertex VectorToVertex(UnityEngine.Vector3 vector)
+            {
+                return new Vertex(vector.x, vector.z);
+            }
+
+            public UnityEngine.Vector3 ToVector()
+            {
+                return new UnityEngine.Vector3(x, 0, y);
+            }
+
             public Coordinate ToCoordinate()
             {
                 return new Coordinate((int)x, (int)y);
@@ -165,10 +175,15 @@ namespace Assets.Scripts.Generation
 
                 spawn = vertices[random.Next(0, vertices.Count - 1)];
 
-                // Create a new node for each vertex
-                List<Node> nodes = new();
-                foreach (Vertex vertex in vertices)
-                    nodes.Add(new(vertex.x, vertex.y));
+                // Create nodes for floor tiles
+                Node[,] nodes = new Node[settings.gridWidth, settings.gridHeight];
+                IterateArea(0, 0, settings.gridWidth - 1, settings.gridHeight - 1, (int x, int y) =>
+                {
+                    if (IsFloor(grid[x, y]))
+                        nodes[x, y] = new(x, y);
+                    else
+                        nodes[x, y] = null;
+                });
 
                 navigation = new Navigation(nodes);
 

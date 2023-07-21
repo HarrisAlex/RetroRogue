@@ -21,41 +21,14 @@ namespace Assets.Scripts.AI
 
         private List<Action> actions;
 
-        private WorldState currentWorldState;
+        public WorldState currentWorldState { get; private set; }
         private WorldState goalWorldState;
 
         private Stack<Action> currentPath;
-        private ActionReference currentAction;
-        private IAnimatedAction currentAnimation;
+        private Action currentAction;
 
         // Navigation
         private Vector3 destination = Vector3.zero;
-
-        // FSM
-        public enum States
-        {
-            GoTo,
-            Animate
-        }
-        private States currentState;
-
-        public class ActionReference
-        {
-            public readonly Action action;
-            public readonly AGoTo goTo;
-            public readonly IAnimatedAction animation;
-
-            public ActionReference(Action action)
-            {
-                this.action = action;
-
-                if (action.GetType().GetInterface("IAnimatedAction") == typeof(IAnimatedAction))
-                    animation = (IAnimatedAction)action;
-
-                if (action.GetType() == typeof(AGoTo))
-                    goTo = (AGoTo)action;
-            }
-        }
 
         private void Awake()
         {
@@ -87,62 +60,39 @@ namespace Assets.Scripts.AI
             currentWorldState.SetCondition(Conditions.NEAR_PLAYER, true);
             currentWorldState.SetCondition(Conditions.AWARE_OF_PLAYER, true);
 
-            currentPath = new();
-
-            // FSM
-            currentState = States.Animate;
+            currentPath = null;
+            currentAction = null;
         }
 
         private void Update()
         {
             if (currentWorldState == goalWorldState) return;
 
-            if (currentPath.Count < 1)
+            if (currentPath == null)
             {
-                currentPath = FindPath();
-                currentAction = null;
-            }
+                if (!TryFindPath(out Stack<Action> path)) return;
 
-            if (currentPath == null) return;
-
-            if (currentAction == null)
-            {
+                currentPath = path;
                 StartNextAction();
-
-                return;
             }
 
-            movementController.SetInput(0, 0);
-            lookController.SetInput(0, 0);
+            if (currentAction == null) return;
 
-            if (currentAction.goTo != null)
+            currentAction.Run(new ActionInput(transform, movementController, lookController, animator, this, GameManager.dungeon.navigation), () =>
             {
-                movementController.SetInput(0, 1);
-                lookController.SetInput(Vector3.Angle(transform.forward, (currentAction.goTo.GetDestination() - transform.position).normalized) * Time.smoothDeltaTime, 0);
+                foreach (Condition condition in currentAction.postconditions.Conditions)
+                {
+                    currentWorldState.SetCondition(condition.name, condition.value);
+                }
 
-                if ((transform.position - currentAction.goTo.GetDestination()).sqrMagnitude < 2)
-                    StartNextAction();
-            }
-
-            if (currentAction.animation != null)
-            {
-                if (currentAction.animation.GetTerminationType() == TerminationType.Condition)
-                    if (currentWorldState.MatchesState((Condition)currentAction.animation.GetTerminator()))
-                        StartNextAction();
-            }
-        }
-
-        IEnumerator AnimationTimer(float time, System.Action function)
-        {
-            yield return new WaitForSeconds(time);
-
-            function();
+                StartNextAction();
+            });
         }
 
         private void StartNextAction()
         {
             if (currentPath.TryPop(out Action action))
-                currentAction = new(action);
+                currentAction = action;
             else
             {
                 currentAction = null;
@@ -151,33 +101,13 @@ namespace Assets.Scripts.AI
                 return;
             }
 
-            if (currentAction.animation != null)
-            {
-                animator.CrossFade(currentAction.animation.GetAnimationHash(), 0.1f);
-
-                if (currentAction.animation.GetTerminationType() == TerminationType.Time)
-                    StartCoroutine(AnimationTimer((float)currentAction.animation.GetTerminator(), StartNextAction));
-                else if (currentAction.animation.GetTerminationType() == TerminationType.Animation)
-                {
-                    foreach (AnimationClip clip in animator.runtimeAnimatorController.animationClips)
-                    {
-                        if (Animator.StringToHash(clip.name) == currentAction.animation.GetAnimationHash())
-                        {
-                            StartCoroutine(AnimationTimer(clip.length, StartNextAction));
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (currentAction.action.GetType() == typeof(AGoTo))
-                currentState = States.GoTo;
-            else
-                currentState = States.Animate;
+            Debug.Log(currentAction);
         }
 
-        private Stack<Action> FindPath()
+        private bool TryFindPath(out Stack<Action> path)
         {
+            path = new();
+
             StateNode startNode = new(currentWorldState);
             startNode.parentNode = null;
             startNode.parentAction = null;
@@ -220,8 +150,6 @@ namespace Assets.Scripts.AI
                 // If found path
                 if (current.state.MatchesState(goalWorldState))
                 {
-                    Stack<Action> path = new();
-
                     while (current.parentAction != null)
                     {
                         path.Push(current.parentAction);
@@ -229,7 +157,7 @@ namespace Assets.Scripts.AI
                         current = current.parentNode;
                     }
 
-                    return path;
+                    return true;
                 }
 
                 // Find connections
@@ -286,7 +214,7 @@ namespace Assets.Scripts.AI
                 }
             }
 
-            return new();
+            return false;
         }
 
         private Action GetConnectingAction(WorldState current, WorldState goal)
@@ -339,14 +267,11 @@ namespace Assets.Scripts.AI
             AUseObject useObject;
             switch (smartObject.GetAnimationTerminationType())
             {
-                case TerminationType.Time:
-                    useObject = new(precondition, smartObject.GetPostconditions(), smartObject.GetAnimationName(), smartObject.GetAnimationDuration());
-                    break;
                 case TerminationType.Condition:
                     useObject = new(precondition, smartObject.GetPostconditions(), smartObject.GetAnimationName(), smartObject.GetAnimationCondition());
                     break;
                 default:
-                    useObject = new(precondition, smartObject.GetPostconditions(), smartObject.GetAnimationName());
+                    useObject = new(precondition, smartObject.GetPostconditions(), smartObject.GetAnimationName(), smartObject.GetAnimationDuration());
                     break;
             }
 

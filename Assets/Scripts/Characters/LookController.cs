@@ -8,6 +8,7 @@ public class LookController : MonoBehaviour
     [SerializeField] private float lookAngleMin = -70;
 
     private Vector2 lookVelocity = Vector2.zero;
+    private bool applyInput = false;
 
     // Component References
     private new Transform camera;
@@ -20,6 +21,9 @@ public class LookController : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (!applyInput)
+            return;
+
         // Wrap horizontal angle
         if (lookVelocity.x > 360)
         {
@@ -37,11 +41,25 @@ public class LookController : MonoBehaviour
         transform.eulerAngles = new Vector3(0, lookVelocity.x, 0);
         if (camera != null)
             camera.localEulerAngles = new Vector3(lookVelocity.y, 0, 0);
+
+        applyInput = false;
     }
 
     public void SetInput(float horizontal, float vertical)
     {
         lookVelocity.x += horizontal * lookSensitivity * Time.smoothDeltaTime * 100;
         lookVelocity.y -= vertical * lookSensitivity * Time.smoothDeltaTime * 100;
+
+        applyInput = true;
+    }
+
+    public void SetInput(Vector3 target)
+    {
+        Vector3 toVector = new Vector3(target.x - transform.position.x, 0, target.z - transform.position.z);
+
+        lookVelocity.x = Vector3.SignedAngle(Vector3.forward, toVector, Vector3.up);
+        lookVelocity.y = 0;
+
+        applyInput = true;
     }
 }

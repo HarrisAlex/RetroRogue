@@ -29,6 +29,7 @@ public class MovementController : MonoBehaviour
     private const float sprintTransition = 4;
     private Vector3 velocity = Vector3.zero;
     private bool isGrounded;
+    private bool applyInput = false;
 
     // Component references
     private CharacterController controller;
@@ -52,9 +53,10 @@ public class MovementController : MonoBehaviour
 
     private void Update()
     {
+
         // Cache variables
         speed = Mathf.Lerp(speed, TargetSpeed, Time.smoothDeltaTime * sprintTransition);
-        isGrounded = Physics.CheckSphere(transform.position + new Vector3(0, controller.radius - 0.05f, 0), 
+        isGrounded = Physics.CheckSphere(transform.position + new Vector3(0, controller.radius - 0.05f, 0),
             controller.radius, ~LayerMask.GetMask("Character"));
 
         // Add gravity
@@ -72,7 +74,15 @@ public class MovementController : MonoBehaviour
         // Clamp velocity
         velocity = Vector3.ClampMagnitude(velocity, speed);
 
+        if (!applyInput)
+        {
+            velocity.x = 0;
+            velocity.z = 0;
+        }
+
         controller.Move(velocity);
+
+        applyInput = false;
     }
 
     public void SetSprint(bool active)
@@ -94,6 +104,8 @@ public class MovementController : MonoBehaviour
     public void SetInput(float horizontal, float vertical)
     {
         velocity = new Vector3(horizontal * speed * Time.smoothDeltaTime, velocity.y, vertical * speed * Time.smoothDeltaTime);
+
+        applyInput = true;
     }
 
     public void Jump()

@@ -1,9 +1,31 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using Assets.Scripts.AI;
 using UnityEngine;
+using static Assets.Scripts.Generation.DungeonGeneration;
 
 namespace Assets.Scripts.AI
 {
+    public readonly struct ActionInput
+    {
+        public readonly Transform playerTransform;
+        public readonly MovementController movementController;
+        public readonly LookController lookController;
+        public readonly Animator animator;
+        public readonly AIController aiController;
+        public readonly Navigation navigation;
+
+        public ActionInput(Transform playerTransform, MovementController movementController, LookController lookController, Animator animator, AIController aiController, Navigation navigation)
+        {
+            this.playerTransform = playerTransform;
+            this.movementController = movementController;
+            this.lookController = lookController;
+            this.animator = animator;
+            this.aiController = aiController;
+            this.navigation = navigation;
+        }
+    }
+
     public abstract class Action
     {
         public int cost;
@@ -38,21 +60,16 @@ namespace Assets.Scripts.AI
         {
             return postconditions;
         }
+
+        public abstract void Run(ActionInput input, System.Action OnFinish);
     }
 
     public enum TerminationType
     {
         Time,
         Condition,
-        Animation
     }
 
-    public interface IAnimatedAction
-    {
-        public int GetAnimationHash();
-        public TerminationType GetTerminationType();
-        public object GetTerminator();
-    }
 
     public class StateNode
     {
@@ -100,6 +117,9 @@ namespace Assets.Scripts.AI
         private Transform destination;
         private Vector3 start;
 
+        private List<Vertex> path;
+        private int current;
+
         public AGoTo(Transform destination, WorldState postconditions)
         {
             this.destination = destination;
@@ -122,63 +142,94 @@ namespace Assets.Scripts.AI
         {
             cost = Mathf.RoundToInt((start - destination.position).magnitude);
         }
+
+        public override void Run(ActionInput input, System.Action OnFinish)
+        {
+            if (path == null)
+            {
+                path = input.navigation.FindPath(Vertex.VectorToVertex(input.playerTransform.position), Vertex.VectorToVertex(destination.position));
+                current = 0;
+
+                if (path.Count < 1)
+                {
+                    OnFinish();
+                    return;
+                }
+            }
+
+            input.movementController.SetInput(0, 1);
+            input.lookController.SetInput(new Vector3(path[current].x, 0, path[current].y));
+
+            if ((input.playerTransform.position - new Vector3(path[current].x, 0, path[current].y)).sqrMagnitude < 0.01f)
+            {
+                current++;
+
+                if (current >= path.Count)
+                {
+                    OnFinish();
+                    return;
+                }
+            }
+        }
     }
 
-    public class AUseObject : Action, IAnimatedAction
+    public class AUseObject : Action
     {
-        private int animationHash;
+        private string animation;
         private TerminationType terminationType;
 
-        private object terminator;
+        private float duration;
+        private Condition condition;
 
-        public AUseObject(WorldState preconditions, WorldState postconditions, string animationName)
+        private float timer;
+
+        public AUseObject(WorldState preconditions, WorldState postconditions, string animation, float duration)
         {
             cost = 2;
 
             this.preconditions = preconditions;
             this.postconditions = postconditions;
 
-            animationHash = Animator.StringToHash(animationName);
-            terminationType = TerminationType.Animation;
-        }
-
-        public AUseObject(WorldState preconditions, WorldState postconditions, string animationName, float duration)
-        {
-            cost = 2;
-
-            this.preconditions = preconditions;
-            this.postconditions = postconditions;
-
-            animationHash = Animator.StringToHash(animationName);
+            this.animation = animation;
+            this.duration = duration;
             terminationType = TerminationType.Time;
-            terminator = duration;
+
+            timer = 0;
         }
 
-        public AUseObject(WorldState preconditions, WorldState postconditions, string animationName, Condition condition)
+        public AUseObject(WorldState preconditions, WorldState postconditions, string animation, Condition condition)
         {
             cost = 2;
 
             this.preconditions = preconditions;
             this.postconditions = postconditions;
 
-            animationHash = Animator.StringToHash(animationName);
+            this.animation = animation;
+            this.condition = condition;
             terminationType = TerminationType.Condition;
-            terminator = condition;
+
+            timer = 0;
         }
 
-        public int GetAnimationHash()
-        {
-            return animationHash;
-        }
 
-        public TerminationType GetTerminationType()
+        public override void Run(ActionInput input, System.Action OnFinish)
         {
-            return terminationType;
-        }
+            input.animator.CrossFade(animation, 0.1f);
 
-        public object GetTerminator()
-        {
-            return terminator;
+            if (terminationType == TerminationType.Time)
+            {
+                timer += Time.deltaTime;
+
+                if (timer < duration)
+                    return;
+            }
+            else
+            {
+                if (!input.aiController.currentWorldState.MatchesState(condition))
+                    return;
+            }
+
+            OnFinish();
         }
     }
 
@@ -190,6 +241,11 @@ namespace Assets.Scripts.AI
             preconditions.SetCondition(Conditions.AWARE_OF_PLAYER, false);
 
             postconditions.SetCondition(Conditions.AWARE_OF_SOUND, false);
+        }
+
+        public override void Run(ActionInput input, System.Action OnFinish)
+        {
+            OnFinish();
         }
     }
 
@@ -203,6 +259,11 @@ namespace Assets.Scripts.AI
 
             postconditions.SetCondition(Conditions.CAN_SEE_PLAYER, true);
         }
+
+        public override void Run(ActionInput input, System.Action OnFinish)
+        {
+            OnFinish();
+        }
     }
 
     public class ARangedAttack : Action
@@ -214,6 +275,11 @@ namespace Assets.Scripts.AI
             preconditions.SetCondition(Conditions.HAS_AMMO, true);
 
             postconditions.SetCondition(Conditions.PLAYER_DEAD, true);
+        }
+
+        public override void Run(ActionInput input, System.Action OnFinish)
+        {
+            OnFinish();
         }
     }
 
@@ -228,6 +294,11 @@ namespace Assets.Scripts.AI
 
             postconditions.SetCondition(Conditions.PLAYER_DEAD, true);
         }
+
+        public override void Run(ActionInput input, System.Action OnFinish)
+        {
+            OnFinish();
+        }
     }
 
     public class AChase : Action
@@ -240,6 +311,11 @@ namespace Assets.Scripts.AI
 
             postconditions.SetCondition(Conditions.NEAR_PLAYER, true);
         }
+
+        public override void Run(ActionInput input, System.Action OnFinish)
+        {
+            OnFinish();
+        }
     }
 
     public class ARecover : Action
@@ -251,6 +327,11 @@ namespace Assets.Scripts.AI
             preconditions.SetCondition(Conditions.NEAR_HEALTH, true);
 
             postconditions.SetCondition(Conditions.LOW_HEALTH, false);
+        }
+
+        public override void Run(ActionInput input, System.Action OnFinish)
+        {
+            OnFinish();
         }
     }
 }

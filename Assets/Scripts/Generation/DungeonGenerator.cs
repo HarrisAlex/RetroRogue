@@ -181,9 +181,6 @@ namespace Assets.Scripts.Generation
                     nodes[x, y] = null;
             });
 
-            foreach (Node node in nodes)
-                node.neighbors = FindNeighbors(nodes, node);
-
             Navigation navigation = new Navigation(nodes);
 
             // Pathfind and fill hallways
@@ -193,12 +190,12 @@ namespace Assets.Scripts.Generation
 
                 if (path == null) continue;
 
-                foreach (Vertex vertex in path)
+                foreach (Vertex coordinate in path)
                 {
-                    FillArea((int)vertex.x - Settings.hallwayExpansion,
-                        (int)vertex.y - Settings.hallwayExpansion,
-                        (int)vertex.x + Settings.hallwayExpansion,
-                        (int)vertex.y + Settings.hallwayExpansion,
+                    FillArea((int)coordinate.x - Settings.hallwayExpansion,
+                        (int)coordinate.y - Settings.hallwayExpansion,
+                        (int)coordinate.x + Settings.hallwayExpansion,
+                        (int)coordinate.y + Settings.hallwayExpansion,
                         TileType.HallwayFloor, IsVoid
                         );
                 }

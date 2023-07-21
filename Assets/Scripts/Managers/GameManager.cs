@@ -18,9 +18,8 @@ public class GameManager : MonoBehaviour
 
     private DungeonGenerator dungeonGenerator;
     private DungeonRenderer dungeonRenderer;
-    private Dungeon dungeon;
+    public static Dungeon dungeon { get; private set; }
 
-    // Start is called before the first frame update
     private void Awake()
     {
         // Get references
