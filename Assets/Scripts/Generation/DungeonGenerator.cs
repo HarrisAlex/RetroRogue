@@ -5,16 +5,17 @@ using Random = System.Random;
 
 namespace Assets.Scripts.Generation
 {
+    [Flags]
     public enum TileType
     {
-        Void,
-        RoomFloor,
-        HallwayFloor,
-        Wall,
-        TopLeftCorner,
-        TopRightCorner,
-        BottomLeftCorner,
-        BottomRightCorner,
+        Void = 0,
+        RoomFloor = 1,
+        HallwayFloor = 2,
+        Wall = 4,
+        TopLeftCorner = 8,
+        TopRightCorner = 16,
+        BottomLeftCorner = 32,
+        BottomRightCorner = 64,
     }
 
     public class Room
@@ -118,7 +119,7 @@ namespace Assets.Scripts.Generation
                     rooms.Add(newRoom);
 
                     FillArea(newRoom.xPosition, newRoom.yPosition,
-                        newRoom.xPosition + newRoom.width, newRoom.yPosition + newRoom.height, TileType.RoomFloor);
+                        newRoom.xPosition + newRoom.width, newRoom.yPosition + newRoom.height, TileType.RoomFloor, true);
                 }
             }
 
@@ -234,12 +235,14 @@ namespace Assets.Scripts.Generation
                 if (path == null)
                     continue;
 
+                int expansion = random.Next(0, Settings.maxHallwayExpansion);
+
                 foreach (Node<Coordinate> coordinate in path)
                 {
-                    FillArea(coordinate.position.x - Settings.hallwayExpansion,
-                        coordinate.position.y - Settings.hallwayExpansion,
-                        coordinate.position.x + Settings.hallwayExpansion,
-                        coordinate.position.y + Settings.hallwayExpansion,
+                    FillArea(coordinate.position.x - expansion,
+                        coordinate.position.y - expansion,
+                        coordinate.position.x + expansion,
+                        coordinate.position.y + expansion,
                         TileType.HallwayFloor, IsVoid
                         );
                 }
@@ -249,7 +252,7 @@ namespace Assets.Scripts.Generation
             }
 
             // Add walls
-            FillArea(0, 0, Settings.gridWidth - 1, Settings.gridHeight - 1, TileType.Wall, ShouldPlaceWall);
+            FillArea(0, 0, Settings.gridWidth - 1, Settings.gridHeight - 1, TileType.Wall, ShouldPlaceWall, true);
 
 
             // Add inset corners
@@ -439,11 +442,14 @@ namespace Assets.Scripts.Generation
 
         #region Functions for Setting Tiles
 
-        private void SetTile(int x, int y, TileType tileType)
+        private void SetTile(int x, int y, TileType tileType, bool overwrite = false)
         {
             if (!WithinGrid(x, y)) return;
 
-            grid[x, y] = tileType;
+            if (overwrite)
+                grid[x, y] = tileType;
+            else
+                grid[x, y] |= tileType;
         }
 
         /// <summary>
@@ -454,11 +460,11 @@ namespace Assets.Scripts.Generation
         /// <param name="x2">Top-right corner of area.</param>
         /// <param name="y2">Top-rightcorner of area.</param>
         /// <param name="tileType">The TileType of which to set tiles in the area.</param>
-        private void FillArea(int x1, int y1, int x2, int y2, TileType tileType)
+        private void FillArea(int x1, int y1, int x2, int y2, TileType tileType, bool overwrite = false)
         {
             if (!WithinGrid(x1, y1) || !WithinGrid(x2, y2)) return;
 
-            IterateArea(x1, y1, x2, y2, (int x, int y) => SetTile(x, y, tileType));
+            IterateArea(x1, y1, x2, y2, (int x, int y) => SetTile(x, y, tileType, overwrite));
         }
 
         /// <summary>
@@ -470,7 +476,7 @@ namespace Assets.Scripts.Generation
         /// <param name="y2">Top-rightcorner of area.</param>
         /// <param name="tileType">The TileType of which to set tiles in the area.</param>
         /// <param name="conditional">The function by which to determine whether a tile should be set.</param>
-        private void FillArea(int x1, int y1, int x2, int y2, TileType tileType, Func<int, int, bool> conditional)
+        private void FillArea(int x1, int y1, int x2, int y2, TileType tileType, Func<int, int, bool> conditional, bool overwrite = false)
         {
             if (!WithinGrid(x1, y1) || !WithinGrid(x2, y2)) return;
 
@@ -479,7 +485,7 @@ namespace Assets.Scripts.Generation
                 if (!WithinGrid(x, y)) return;
 
                 if (conditional(x, y))
-                    SetTile(x, y, tileType);
+                    SetTile(x, y, tileType, overwrite);
             });
         }
 
@@ -518,21 +524,31 @@ namespace Assets.Scripts.Generation
         {
             if (!IsCorner(x, y)) return false;
 
-            Coordinate bottomRight = new(x + 1, y - 1);
-            Coordinate top = new(x, y + 1);
-            Coordinate left = new(x - 1, y);
+            Coordinate coords = new(x, y);
 
-            if (TryGetCoordinate(top, out TileType tile1) && TryGetCoordinate(left, out TileType tile2))
+            if (TryGetCoordinate(coords.GetNeighborCoordinate(Coordinate.Neighbor.Left), out TileType tile1))
             {
-                if (tile1 != TileType.Wall || tile2 != TileType.Wall)
+                if (IsFloor(tile1))
                     return false;
             }
 
-            if (TryGetCoordinate(bottomRight, out TileType tile3))
+            if (TryGetCoordinate(coords.GetNeighborCoordinate(Coordinate.Neighbor.Down), out TileType tile5))
             {
-                if (!IsWall(tile3))
+                if (!tile5.HasFlag(TileType.HallwayFloor))
                     return false;
             }
+
+            if (TryGetCoordinate(coords.GetNeighborCoordinate(Coordinate.Neighbor.Right), out TileType tile4))
+            {
+                if (!tile4.HasFlag(TileType.HallwayFloor))
+                    return false;
+            }
+
+            //if (TryGetCoordinate(bottomRight, out TileType tile3))
+            //{
+            //    if (IsFloor(tile3))
+            //        return false;
+            //}
 
             return true;
         }
@@ -541,21 +557,31 @@ namespace Assets.Scripts.Generation
         {
             if (!IsCorner(x, y)) return false;
 
-            Coordinate bottomLeft = new(x - 1, y - 1);
-            Coordinate top = new(x, y + 1);
-            Coordinate right = new(x + 1, y);
+            Coordinate coords = new(x, y);
 
-            if (TryGetCoordinate(top, out TileType tile1) && TryGetCoordinate(right, out TileType tile2))
+            if (TryGetCoordinate(coords.GetNeighborCoordinate(Coordinate.Neighbor.Right), out TileType tile1))
             {
-                if (tile1 != TileType.Wall || tile2 != TileType.Wall)
+                if (IsFloor(tile1))
                     return false;
             }
 
-            if (TryGetCoordinate(bottomLeft, out TileType tile3))
+            if (TryGetCoordinate(coords.GetNeighborCoordinate(Coordinate.Neighbor.Left), out TileType tile4))
             {
-                if (!IsWall(tile3))
+                if (!tile4.HasFlag(TileType.HallwayFloor))
                     return false;
             }
+
+            if (TryGetCoordinate(coords.GetNeighborCoordinate(Coordinate.Neighbor.Down), out TileType tile5))
+            {
+                if (!tile5.HasFlag(TileType.HallwayFloor))
+                    return false;
+            }
+
+            //if (TryGetCoordinate(bottomLeft, out TileType tile3))
+            //{
+            //    if (IsFloor(tile3))
+            //        return false;
+            //}
 
             return true;
         }
@@ -564,21 +590,31 @@ namespace Assets.Scripts.Generation
         {
             if (!IsCorner(x, y)) return false;
 
-            Coordinate topRight = new(x + 1, y + 1);
-            Coordinate bottom = new(x, y - 1);
-            Coordinate left = new(x - 1, y);
+            Coordinate coords = new(x, y);
 
-            if (TryGetCoordinate(bottom, out TileType tile1) && TryGetCoordinate(left, out TileType tile2))
+            if (TryGetCoordinate(coords.GetNeighborCoordinate(Coordinate.Neighbor.Left), out TileType tile2))
             {
-                if (!IsWall(tile1) || !IsWall(tile2))
+                if (IsFloor(tile2))
                     return false;
             }
 
-            if (TryGetCoordinate(topRight, out TileType tile3))
+            if (TryGetCoordinate(coords.GetNeighborCoordinate(Coordinate.Neighbor.Right), out TileType tile4))
             {
-                if (!IsWall(tile3))
+                if (!tile4.HasFlag(TileType.HallwayFloor))
                     return false;
             }
+
+            if (TryGetCoordinate(coords.GetNeighborCoordinate(Coordinate.Neighbor.Up), out TileType tile5))
+            {
+                if (!tile5.HasFlag(TileType.HallwayFloor))
+                    return false;
+            }
+
+            //if (TryGetCoordinate(topRight, out TileType tile3))
+            //{
+            //    if (IsFloor(tile3))
+            //        return false;
+            //}
 
             return true;
         }
@@ -587,21 +623,34 @@ namespace Assets.Scripts.Generation
         {
             if (!IsCorner(x, y)) return false;
 
-            Coordinate topLeft = new(x - 1, y + 1);
-            Coordinate right = new(x + 1, y);
-            Coordinate bottom = new(x, y - 1);
+            Coordinate coords = new(x, y);
 
-            if (TryGetCoordinate(bottom, out TileType tile1) && TryGetCoordinate(right, out TileType tile2))
+            TileType tile;
+
+            if (TryGetCoordinate(coords.GetNeighborCoordinate(Coordinate.Neighbor.Right), out tile))
             {
-                if (!IsWall(tile1) || !IsWall(tile2))
+                if (IsFloor(tile))
                     return false;
             }
 
-            if (TryGetCoordinate(topLeft, out TileType tile3))
+            if (TryGetCoordinate(coords.GetNeighborCoordinate(Coordinate.Neighbor.Left), out tile))
             {
-                if (!IsWall(tile3))
+                if (!IsFloor(tile))
                     return false;
             }
+
+            if (TryGetCoordinate(coords.GetNeighborCoordinate(Coordinate.Neighbor.Up), out tile))
+            {
+                if (!IsFloor(tile))
+                    return false;
+            }
+
+
+            //if (TryGetCoordinate(topLeft, out TileType tile3))
+            //{
+            //    if (IsFloor(tile3))
+            //        return false;
+            //}
 
             return true;
         }

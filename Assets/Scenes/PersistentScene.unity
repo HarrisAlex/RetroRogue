@@ -172,7 +172,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 74884396}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 95, y: 0, z: 89}
+  m_LocalPosition: {x: 104, y: 0, z: 40}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -262,7 +262,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 384370827}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 24.28, y: 0, z: 38.56}
+  m_LocalPosition: {x: 33, y: 0, z: 60}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -548,12 +548,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   enableDebugging: 1
-  drawWallTiles: 0
-  drawCornerTiles: 0
+  drawWallTiles: 1
+  drawCornerTiles: 1
   drawFloorTiles: 1
-  hideWalls: 1
-  drawEdges: 1
-  drawRooms: 1
+  hideWalls: 0
+  drawEdges: 0
+  drawRooms: 0
   spacing: 0.05
 --- !u!114 &838776642
 MonoBehaviour:

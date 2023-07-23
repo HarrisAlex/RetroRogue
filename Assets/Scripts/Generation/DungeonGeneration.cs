@@ -77,6 +77,34 @@ namespace Assets.Scripts.Generation
             {
                 return new Vertex(x, y);
             }
+
+            [Flags]
+            public enum Neighbor
+            {
+                Up = 1,
+                Down = 2,
+                Left = 4,
+                Right = 8
+            }
+
+            public Coordinate GetNeighborCoordinate(Neighbor neighbor)
+            {
+                int neighborX = x, neighborY = y;
+
+                if (neighbor.HasFlag(Neighbor.Up))
+                    neighborY++;
+
+                if (neighbor.HasFlag(Neighbor.Down))
+                    neighborY--;
+
+                if (neighbor.HasFlag(Neighbor.Left))
+                    neighborX--;
+
+                if (neighbor.HasFlag(Neighbor.Right))
+                    neighborX++;
+
+                return new(neighborX, neighborY);
+            }
         }
 
         public class Edge
@@ -351,18 +379,18 @@ namespace Assets.Scripts.Generation
 
         public static bool IsFloor(TileType type)
         {
-            return type == TileType.HallwayFloor || type == TileType.RoomFloor;
+            return type.HasFlag(TileType.HallwayFloor) || type.HasFlag(TileType.RoomFloor);
         }
 
         public static bool IsCorner(TileType type)
         {
-            return type == TileType.BottomLeftCorner || type == TileType.BottomRightCorner
-                || type == TileType.TopLeftCorner || type == TileType.TopRightCorner;
+            return type.HasFlag(TileType.BottomLeftCorner) || type.HasFlag(TileType.BottomRightCorner)
+                || type.HasFlag(TileType.TopLeftCorner) || type.HasFlag(TileType.TopRightCorner);
         }
 
         public static bool IsWall(TileType type)
         {
-            return type == TileType.Wall || IsCorner(type);
+            return type.HasFlag(TileType.Wall) || IsCorner(type);
         }
     }
 }

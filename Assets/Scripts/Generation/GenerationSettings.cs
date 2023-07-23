@@ -14,7 +14,7 @@ namespace Assets.Scripts.Generation
         public int minRoomWidth = 7;
         public int minRoomHeight = 7;
         public int maxRoomAttempts = 5;
-        public int hallwayExpansion = 1;
+        public int maxHallwayExpansion = 3;
         public float extraHallwayGenerationChance = 0;
     }
 }

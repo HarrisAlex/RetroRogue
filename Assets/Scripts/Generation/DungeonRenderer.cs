@@ -29,70 +29,94 @@ namespace Assets.Scripts.Generation
             Transform current;
 
             // Wall vars
-            string cornerName;
-            float angle, xPos, yPos;
+            string cornerName = "";
+            float angle = 0, xPos, yPos;
             IterateArea(0, 0, width - 1, height - 1, (int x, int y) =>
             {
+                xPos = x;
+                yPos = y;
+
                 currentTile = dungeon.GetTile(x, y);
                 if (!IsWall(currentTile)) return;
 
-                if (IsCorner(currentTile))
+                if (currentTile.HasFlag(TileType.TopLeftCorner))
                 {
+                    angle = 135;
+                    xPos = x + 1;
+                    yPos = y + 1;
+                    cornerName = "TL";
+
                     current = CreatePlane(diagonalScale, 3, wallMaterial);
-
-                    switch (currentTile)
-                    {
-                        case TileType.TopLeftCorner:
-                            angle = 135;
-                            xPos = x + 1;
-                            yPos = y + 1;
-                            cornerName = "TL";
-                            break;
-                        case TileType.BottomRightCorner:
-                            angle = -45;
-                            xPos = x;
-                            yPos = y;
-                            cornerName = "BR";
-                            break;
-                        case TileType.BottomLeftCorner:
-                            angle = 45;
-                            xPos = x;
-                            yPos = y + 1;
-                            cornerName = "BL";
-                            break;
-                        default:
-                            angle = -135;
-                            xPos = x + 1;
-                            yPos = y;
-                            cornerName = "TR";
-                            break;
-                    }
-
-#if UNITY_EDITOR
-                    SetWallName(current, x, y, cornerName);
-#endif
-
-
                     current.position = new Vector3(xPos, 0, yPos);
                     current.eulerAngles = new Vector3(270, angle, 0);
                     current.parent = wallRoot;
-                    return;
+#if UNITY_EDITOR
+                    SetWallName(current, x, y, cornerName);
+#endif
+                }
+
+                if (currentTile.HasFlag(TileType.BottomRightCorner))
+                {
+                    angle = -45;
+                    xPos = x;
+                    yPos = y;
+                    cornerName = "BR";
+
+                    current = CreatePlane(diagonalScale, 3, wallMaterial);
+                    current.position = new Vector3(xPos, 0, yPos);
+                    current.eulerAngles = new Vector3(270, angle, 0);
+                    current.parent = wallRoot;
+#if UNITY_EDITOR
+                    SetWallName(current, x, y, cornerName);
+#endif
+                }
+
+                if (currentTile.HasFlag(TileType.BottomLeftCorner))
+                {
+                    angle = 45;
+                    xPos = x;
+                    yPos = y + 1;
+                    cornerName = "BL";
+
+                    current = CreatePlane(diagonalScale, 3, wallMaterial);
+                    current.position = new Vector3(xPos, 0, yPos);
+                    current.eulerAngles = new Vector3(270, angle, 0);
+                    current.parent = wallRoot;
+#if UNITY_EDITOR
+                    SetWallName(current, x, y, cornerName);
+#endif
+                }
+
+                if (currentTile.HasFlag(TileType.TopRightCorner))
+                {
+                    angle = -135;
+                    xPos = x + 1;
+                    yPos = y;
+                    cornerName = "TR";
+
+                    current = CreatePlane(diagonalScale, 3, wallMaterial);
+                    current.position = new Vector3(xPos, 0, yPos);
+                    current.eulerAngles = new Vector3(270, angle, 0);
+                    current.parent = wallRoot;
+#if UNITY_EDITOR
+                    SetWallName(current, x, y, cornerName);
+#endif
                 }
 
                 // Right
-                if (IsFloor(dungeon.GetTile(x + 1, y)))
+                if (IsFloor(dungeon.GetTile(x + 1, y)) && !currentTile.HasFlag(TileType.BottomLeftCorner) && !currentTile.HasFlag(TileType.TopLeftCorner))
                     CreateWall(x + 1, y + 1, 90, "R");
 
                 // Left
-                if (IsFloor(dungeon.GetTile(x - 1, y)))
+                if (IsFloor(dungeon.GetTile(x - 1, y)) && !currentTile.HasFlag(TileType.TopRightCorner) && !currentTile.HasFlag(TileType.BottomRightCorner))
                     CreateWall(x, y, 270, "L");
 
                 // Top
-                if (IsFloor(dungeon.GetTile(x, y + 1)))
+                if (IsFloor(dungeon.GetTile(x, y + 1)) && !currentTile.HasFlag(TileType.BottomLeftCorner) && !currentTile.HasFlag(TileType.BottomRightCorner))
                     CreateWall(x, y + 1, 0, "T");
 
                 // Bottom
-                if (IsFloor(dungeon.GetTile(x, y - 1)))
+                if (IsFloor(dungeon.GetTile(x, y - 1)) && !currentTile.HasFlag(TileType.TopRightCorner) && !currentTile.HasFlag(TileType.TopLeftCorner))
                     CreateWall(x + 1, y, 180, "B");
             });
 
@@ -119,14 +143,20 @@ namespace Assets.Scripts.Generation
             wall.eulerAngles = new Vector3(270, angle, 0);
             wall.parent = wallRoot;
 
+#if UNITY_EDITOR
             SetWallName(wall, x, y, suffix);
+#endif
         }
 
         private void SetWallName(Transform transform, int x, int y, string suffix)
         {
-#if UNITY_EDITOR
+            if (suffix == "R" || suffix == "B")
+                x--;
+
+            if (suffix == "T" || suffix == "R")
+                y--;
+
             transform.name = string.Concat("(", x, ", ", y, ") ", suffix);
-#endif
         }
 
         private Light CreateLight(int x, int y)

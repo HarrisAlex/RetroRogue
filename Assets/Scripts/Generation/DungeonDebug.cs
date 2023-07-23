@@ -56,7 +56,7 @@ namespace Assets.Scripts.Generation
             {
                 if (!IsWall(dungeon.GetTile(x, y))) return;
 
-                DrawRectangle(x, y, 1, 1, 0, Color.green);
+                DrawRectangle(x, y, 1, 1, 0, Color.magenta);
             });
         }
 
@@ -68,7 +68,10 @@ namespace Assets.Scripts.Generation
             {
                 if (!IsCorner(dungeon.GetTile(x, y))) return;
 
-                DrawRectangle(x, y, 1, 1, 0, Color.yellow);
+                if (dungeon.GetTile(x, y).HasFlag(TileType.Wall))
+                    DrawRectangle(x, y, 1, 1, 0, Color.green);
+                else
+                    DrawRectangle(x, y, 1, 1, 0, Color.yellow);
             });
         }
 
@@ -80,7 +83,7 @@ namespace Assets.Scripts.Generation
             {
                 if (!IsFloor(dungeon.GetTile(x, y))) return;
 
-                DrawRectangle(x, y, 1, 1, 0, Color.magenta);
+                DrawRectangle(x, y, 1, 1, 0, Color.white);
             });
         }
 

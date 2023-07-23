@@ -20,5 +20,5 @@ MonoBehaviour:
   minRoomWidth: 7
   minRoomHeight: 7
   maxRoomAttempts: 5
-  hallwayExpansion: 0
+  maxHallwayExpansion: 1
   extraHallwayGenerationChance: 10
