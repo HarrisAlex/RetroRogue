@@ -12,68 +12,6 @@ namespace Assets.Scripts.Generation
         Wall
     }
 
-    public class Room
-    {
-        public int xPosition;
-        public int yPosition;
-
-        public int width;
-        public int height;
-
-        public List<Vertex> lights;
-
-        public Room() { }
-
-        public Room(int xPosition, int yPosition, int width, int height)
-        {
-            this.xPosition = xPosition;
-            this.yPosition = yPosition;
-
-            this.width = width;
-            this.height = height;
-        }
-
-        public Vertex GetCenter()
-        {
-            return new Vertex(xPosition + (width / 2), yPosition + (height / 2));
-        }
-
-        public bool WithinGrid(int gridWidth, int gridHeight)
-        {
-            return xPosition + width < gridWidth || yPosition + height < gridHeight;
-        }
-
-        public static bool RoomsIntersect(Room room1, Room room2)
-        {
-            return !((room1.xPosition >= (room2.xPosition + room2.width))
-                || ((room1.xPosition + room1.width) <= room2.xPosition)
-                || (room1.yPosition >= (room2.yPosition + room2.height))
-                || ((room1.yPosition + room1.height) <= room2.yPosition));
-        }
-
-        public bool ContainsPoint(Vertex vertex)
-        {
-            return (vertex.x >= xPosition && vertex.x <= xPosition + width
-                && vertex.y >= yPosition && vertex.y <= yPosition + height);
-        }
-
-        public List<Edge> GetEdges()
-        {
-            Vertex bottomLeft = new(xPosition, yPosition);
-            Vertex bottomRight = new(xPosition + width, yPosition);
-            Vertex topLeft = new(xPosition, yPosition + height);
-            Vertex topRight = new(xPosition + width, yPosition + height);
-
-            List<Edge> edges = new();
-            edges.Add(new(bottomLeft, topLeft));
-            edges.Add(new(topLeft, topRight));
-            edges.Add(new(topRight, bottomRight));
-            edges.Add(new(bottomRight, bottomLeft));
-
-            return edges;
-        }
-    }
-
     public class DungeonGenerator
     {
         public GenerationSettings Settings { get; private set; }
@@ -93,6 +31,8 @@ namespace Assets.Scripts.Generation
 
         public Dungeon Generate()
         {
+            DateTime start = DateTime.UtcNow;
+
             int seed = Settings.seed;
 
             if (seed == 0)
@@ -194,78 +134,31 @@ namespace Assets.Scripts.Generation
                     selectedEdges.Add(edge);
             }
 
-            // Initialize nodes for pathfinding hallways
-            Node<Coordinate>[,] nodesArray = new Node<Coordinate>[Settings.gridWidth, Settings.gridHeight];
-            IterateArea(0, 0, Settings.gridWidth - 1, Settings.gridHeight - 1, (int x, int y) =>
-            {
-                if (TryGetCoordinate(x, y, out TileType type))
-                    nodesArray[x, y] = new(new Coordinate(x, y));
-                else
-                    nodesArray[x, y] = null;
-            });
-
-            // Find neighbors
-            foreach (Node<Coordinate> node in nodesArray)
-            {
-                List<Node<Coordinate>> neighbors = new();
-
-                int checkX, checkY;
-                IterateArea(-1, -1, 1, 1, (int x, int y) =>
-                {
-                    if (x == 0 && y == 0) return;
-                    if (x == y) return;
-                    if (-x == y) return;
-
-                    checkX = node.position.x + x;
-                    checkY = node.position.y + y;
-
-                    if (TryGetNode(nodesArray, checkX, checkY, out Node<Coordinate> neighbor))
-                        neighbors.Add(neighbor);
-                });
-
-                node.neighbors = neighbors;
-            }
-
-            List<Node<Coordinate>> nodes = new();
-
-            foreach (Node<Coordinate> node in nodesArray)
-                nodes.Add(node);
-
-            Pathfinding<Coordinate> hallwayPathfinder = new(new List<Node<Coordinate>>(nodes));
-
-            // Pathfind and fill hallways
+            // Hallway creation
+            List<Hallway> hallways = new();
             foreach (Edge edge in selectedEdges)
             {
-                List<Node<Coordinate>> path = hallwayPathfinder.FindPath(edge.u.ToCoordinate(), edge.v.ToCoordinate());
+                int expansion = random.Next(1, Settings.maxHallwayExpansion);
+                hallways.Add(new(edge, expansion));
+            }
 
-                if (path == null)
-                    continue;
+            foreach (Hallway hallway in hallways)
+            {
+                IterateArea((int)hallway.BoundingBox.xPosition, (int)hallway.BoundingBox.yPosition,
+                    (int)hallway.BoundingBox.xPosition + (int)hallway.BoundingBox.width, (int)hallway.BoundingBox.yPosition + (int)hallway.BoundingBox.height,
+                    (int x, int y) =>
+                    {
+                        if (!WithinGrid(x, y)) return;
 
-                int expansion = random.Next(0, Settings.maxHallwayExpansion);
-
-                foreach (Node<Coordinate> coordinate in path)
-                {
-                    FillArea(coordinate.position.x - expansion,
-                        coordinate.position.y - expansion,
-                        coordinate.position.x + expansion,
-                        coordinate.position.y + expansion,
-                        TileType.Floor, IsVoid
-                        );
-                }
+                        if (hallway.ContainsPoint(new(x, y)))
+                        {
+                            SetTile(x, y, TileType.Floor);
+                        }
+                    });
             }
 
             // Add walls
             FillArea(0, 0, Settings.gridWidth - 1, Settings.gridHeight - 1, TileType.Wall, ShouldPlaceWall);
-            
-
-            // Add lights
-            foreach (Room room in rooms)
-            {
-                room.lights = new List<Vertex>();
-
-                if (random.Next(0, 1) == 0)
-                    room.lights.Add(room.GetCenter());
-            }
 
             Dungeon dungeon = new(grid, selectedEdges, Settings, random, rooms);
 
@@ -273,6 +166,8 @@ namespace Assets.Scripts.Generation
             if (DungeonDebug.instance != null)
                 DungeonDebug.SetDungeon(dungeon);
 #endif
+
+            UnityEngine.Debug.Log("Time to generate: " + (DateTime.UtcNow - start).TotalMilliseconds);
 
             // Create dungeon struct
             return dungeon;

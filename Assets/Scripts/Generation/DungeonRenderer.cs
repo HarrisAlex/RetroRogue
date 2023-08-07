@@ -32,7 +32,6 @@ namespace Assets.Scripts.Generation
 
                 // Top-Left
                 if (dungeon.GetTile(x - 1, y) == TileType.Wall && dungeon.GetTile(x, y + 1) == TileType.Wall
-                && dungeon.GetTile(x - 1, y - 1) != TileType.Floor && dungeon.GetTile(x + 1, y + 1) != TileType.Floor
                 && dungeon.GetTile(x + 1, y) == TileType.Floor && dungeon.GetTile(x, y - 1) == TileType.Floor)
                 {
                     CreateWall(diagonalScale, x + 1, y + 1, 135, "TL");
@@ -41,7 +40,6 @@ namespace Assets.Scripts.Generation
 
                 // Top-Right
                 if (dungeon.GetTile(x + 1, y) == TileType.Wall && dungeon.GetTile(x, y + 1) == TileType.Wall
-                && dungeon.GetTile(x + 1, y - 1) != TileType.Floor && dungeon.GetTile(x - 1, y + 1) != TileType.Floor
                 && dungeon.GetTile(x - 1, y) == TileType.Floor && dungeon.GetTile(x, y - 1) == TileType.Floor)
                 {
                     CreateWall(diagonalScale, x + 1, y, -135, "TR");
@@ -50,7 +48,6 @@ namespace Assets.Scripts.Generation
 
                 // Bottom-Left
                 if (dungeon.GetTile(x - 1, y) == TileType.Wall && dungeon.GetTile(x, y - 1) == TileType.Wall
-                && dungeon.GetTile(x + 1, y - 1) != TileType.Floor && dungeon.GetTile(x - 1, y + 1) != TileType.Floor
                 && dungeon.GetTile(x + 1, y) == TileType.Floor && dungeon.GetTile(x, y + 1) == TileType.Floor)
                 {
                     CreateWall(diagonalScale, x, y + 1, 45, "BL");
@@ -59,7 +56,6 @@ namespace Assets.Scripts.Generation
 
                 // Bottom-Right
                 if (dungeon.GetTile(x + 1, y) == TileType.Wall && dungeon.GetTile(x, y - 1) == TileType.Wall
-                && dungeon.GetTile(x + 1, y + 1) != TileType.Floor && dungeon.GetTile(x - 1, y - 1) != TileType.Floor
                 && dungeon.GetTile(x - 1, y) == TileType.Floor && dungeon.GetTile(x, y + 1) == TileType.Floor)
                 {
                     CreateWall(diagonalScale, x, y, -45, "BR");
@@ -86,6 +82,7 @@ namespace Assets.Scripts.Generation
             Transform floor = CreatePlane(width, height, floorMaterial, 120);
             floor.gameObject.AddComponent<BoxCollider>();
             floor.eulerAngles = new Vector3(0, 90, 180);
+            floor.name = "Floor";
 
             Transform ceiling = CreatePlane(width, height, ceilingMaterial, 120);
             ceiling.position = new Vector3(0, 3, 0);

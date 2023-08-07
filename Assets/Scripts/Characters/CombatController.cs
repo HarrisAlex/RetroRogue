@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class CombatController : MonoBehaviour
+public class CombatController : MonoBehaviour, IController
 {
     // Editor variables
     [SerializeField] private RuntimeAnimatorController weaponController;
@@ -41,7 +41,7 @@ public class CombatController : MonoBehaviour
             animator.runtimeAnimatorController = weaponController;
     }
 
-    private void Update()
+    public void Run()
     {
         if (cooldownTimer > 0)
             cooldownTimer -= Time.deltaTime;

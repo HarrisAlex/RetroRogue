@@ -166,6 +166,14 @@ namespace Assets.Scripts.Generation
             public Vertex b;
             public Vertex c;
 
+            public float Area
+            {
+                get
+                {
+                    return MathF.Abs((a.x * (b.y - c.y)) + (b.x * (c.y - a.y)) + (c.x * (a.y - b.y))) * 0.5f;
+                }
+            }
+
             public bool isBad = false;
 
             public Triangle(Vertex a, Vertex b, Vertex c)
@@ -202,6 +210,141 @@ namespace Assets.Scripts.Generation
                 return Distance(vertex, a) < 0.01f
                     || Distance(vertex, b) < 0.01f
                     || Distance(vertex, c) < 0.01f;
+            }
+        }
+
+        public class Hallway
+        {
+            public Vertex a, b, c, d;
+
+            public Rectangle BoundingBox
+            {
+                get
+                {
+                    float xMin = GetExtrema(new() { a, b, c, d }, Extrema.xMinimum);
+                    float yMin = GetExtrema(new() { a, b, c, d }, Extrema.yMinimum);
+                    float xMax = GetExtrema(new() { a, b, c, d }, Extrema.xMaximum);
+                    float yMax = GetExtrema(new() { a, b, c, d }, Extrema.yMaximum);
+
+                    return new(xMin, yMin, xMax - xMin, yMax - yMin);
+                }
+            }
+
+            public float Area
+            {
+                get
+                {
+                    return Distance(a, c) * Distance(a, b);
+                }
+            }
+
+            public Hallway(Edge edge, float expansion)
+            {
+                float edgeAngle = MathF.Asin(MathF.Abs(edge.u.x - edge.v.x) / edge.Length);
+
+                float triangleAngle = ((MathF.PI / 180) * 90) - edgeAngle;
+
+                float dx = MathF.Sin(triangleAngle) * expansion;
+                float dy = MathF.Cos(triangleAngle) * expansion;
+
+                if (edge.u.x > edge.v.x)
+                    dx *= -1;
+
+                if (edge.u.y < edge.v.y)
+                    dy *= -1;
+
+                a = new Vertex(edge.u.x - dx, edge.u.y - dy);
+                b = new Vertex(edge.u.x + dx, edge.u.y + dy);
+                c = new Vertex(edge.v.x - dx, edge.v.y - dy);
+                d = new Vertex(edge.v.x + dx, edge.v.y + dy);
+            }
+
+            public bool ContainsPoint(Vertex vertex)
+            {
+                float triangleAVC = new Triangle(a, vertex, d).Area;
+                float triangleDVC = new Triangle(d, vertex, c).Area;
+                float triangleBVD = new Triangle(b, vertex, d).Area;
+                float triangleAVB = new Triangle(a, vertex, b).Area;
+
+                return Area > triangleAVC + triangleDVC + triangleBVD + triangleAVB;                
+            }
+        }
+
+        public class Room
+        {
+            public int xPosition;
+            public int yPosition;
+
+            public int width;
+            public int height;
+
+            public Room() { }
+
+            public Room(int xPosition, int yPosition, int width, int height)
+            {
+                this.xPosition = xPosition;
+                this.yPosition = yPosition;
+
+                this.width = width;
+                this.height = height;
+            }
+
+            public Vertex GetCenter()
+            {
+                return new Vertex(xPosition + (width / 2), yPosition + (height / 2));
+            }
+
+            public bool WithinGrid(int gridWidth, int gridHeight)
+            {
+                return xPosition + width < gridWidth || yPosition + height < gridHeight;
+            }
+
+            public static bool RoomsIntersect(Room room1, Room room2)
+            {
+                return !((room1.xPosition >= (room2.xPosition + room2.width))
+                    || ((room1.xPosition + room1.width) <= room2.xPosition)
+                    || (room1.yPosition >= (room2.yPosition + room2.height))
+                    || ((room1.yPosition + room1.height) <= room2.yPosition));
+            }
+
+            public bool ContainsPoint(Vertex vertex)
+            {
+                return (vertex.x >= xPosition && vertex.x <= xPosition + width
+                    && vertex.y >= yPosition && vertex.y <= yPosition + height);
+            }
+
+            public List<Edge> GetEdges()
+            {
+                Vertex bottomLeft = new(xPosition, yPosition);
+                Vertex bottomRight = new(xPosition + width, yPosition);
+                Vertex topLeft = new(xPosition, yPosition + height);
+                Vertex topRight = new(xPosition + width, yPosition + height);
+
+                List<Edge> edges = new();
+                edges.Add(new(bottomLeft, topLeft));
+                edges.Add(new(topLeft, topRight));
+                edges.Add(new(topRight, bottomRight));
+                edges.Add(new(bottomRight, bottomLeft));
+
+                return edges;
+            }
+        }
+
+        public struct Rectangle
+        {
+            public float xPosition, yPosition, width, height;
+
+            public Rectangle(float xPosition, float yPosition, float width, float height)
+            {
+                this.xPosition = xPosition;
+                this.yPosition = yPosition;
+                this.width = width;
+                this.height = height;
+            }
+
+            public Vertex GetCenter()
+            {
+                return new Vertex(xPosition + (width / 2), yPosition + (height / 2));
             }
         }
 
@@ -341,6 +484,60 @@ namespace Assets.Scripts.Generation
                     function(x, y);
                 }
             }
+        }
+
+
+        public enum Extrema
+        {
+            xMinimum,
+            yMinimum,
+            xMaximum,
+            yMaximum
+        }
+        public static float GetExtrema(List<Vertex> vertices, Extrema extremaType)
+        {
+            if (vertices == null) return float.MinValue;
+
+            if (vertices.Count < 1) return float.MinValue;
+
+            float greatestExtrema = float.MinValue;
+
+            if (extremaType == Extrema.xMinimum || extremaType == Extrema.yMinimum)
+                greatestExtrema = float.MaxValue;
+
+            switch (extremaType)
+            {
+                case Extrema.xMinimum:
+                    foreach (Vertex vertex in vertices)
+                    {
+                        if (vertex.x < greatestExtrema)
+                            greatestExtrema = vertex.x;
+                    }
+                    break;
+                case Extrema.yMinimum:
+                    foreach (Vertex vertex in vertices)
+                    {
+                        if (vertex.y < greatestExtrema)
+                            greatestExtrema = vertex.y;
+                    }
+                    break;
+                case Extrema.xMaximum:
+                    foreach (Vertex vertex in vertices)
+                    {
+                        if (vertex.x > greatestExtrema)
+                            greatestExtrema = vertex.x;
+                    }
+                    break;
+                case Extrema.yMaximum:
+                    foreach (Vertex vertex in vertices)
+                    {
+                        if (vertex.y > greatestExtrema)
+                            greatestExtrema = vertex.y;
+                    }
+                    break;
+            }
+
+            return greatestExtrema;
         }
     }
 }

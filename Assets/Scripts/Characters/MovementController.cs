@@ -1,11 +1,16 @@
 using UnityEngine;
 
 [RequireComponent(typeof(CharacterController))]
-public class MovementController : MonoBehaviour
+public class MovementController : MonoBehaviour, IController
 {
     // Editor variables
+    public float WalkSpeed => walkSpeed;
     [SerializeField] private float walkSpeed = 2;
-    [SerializeField] private float springSpeed = 4.5f;
+
+    public float SprintSpeed => sprintSpeed;
+    [SerializeField] private float sprintSpeed = 4.5f;
+
+    public float CrouchSpeed => crouchSpeed;
     [SerializeField] private float crouchSpeed = 1.5f;
     [SerializeField] private float jumpForce = 6;
 
@@ -18,7 +23,7 @@ public class MovementController : MonoBehaviour
             switch (State)
             {
                 case MovementState.Sprinting:
-                    return springSpeed;
+                    return sprintSpeed;
                 case MovementState.Crouching:
                     return crouchSpeed;
                 default:
@@ -28,8 +33,9 @@ public class MovementController : MonoBehaviour
     }
     private const float sprintTransition = 4;
     private Vector3 velocity = Vector3.zero;
+
+    public bool IsGrounded => isGrounded;
     private bool isGrounded;
-    private bool applyInput = false;
 
     // Component references
     private CharacterController controller;
@@ -43,19 +49,21 @@ public class MovementController : MonoBehaviour
     }
     public MovementState State { get; private set; }
 
+    public Ground CurrentGround => currentGround;
+    private Ground currentGround;
 
     private void Start()
     {
         controller = GetComponent<CharacterController>();
 
         State = MovementState.Walking;
+        currentGround = Ground.Rock;
     }
 
-    private void Update()
+    public void Run()
     {
-
         // Cache variables
-        speed = Mathf.Lerp(speed, TargetSpeed, Time.smoothDeltaTime * sprintTransition);
+        speed = Mathf.Lerp(TargetSpeed, speed, Mathf.Pow(0.5f, Time.deltaTime * sprintTransition));
         isGrounded = Physics.CheckSphere(transform.position + new Vector3(0, controller.radius - 0.05f, 0),
             controller.radius, ~LayerMask.GetMask("Character"));
 
@@ -63,7 +71,7 @@ public class MovementController : MonoBehaviour
         if (isGrounded)
             velocity.y = 0;
         else
-            velocity.y -= 9.8f * Time.smoothDeltaTime;
+            velocity.y -= 9.8f * Time.deltaTime * Time.deltaTime;
 
         // Localize direction of velocity
         float tempY = velocity.y;
@@ -72,17 +80,10 @@ public class MovementController : MonoBehaviour
         velocity.y = tempY;
 
         // Clamp velocity
-        velocity = Vector3.ClampMagnitude(velocity, speed);
-
-        if (!applyInput)
-        {
-            velocity.x = 0;
-            velocity.z = 0;
-        }
+        velocity = Vector3.ClampMagnitude(velocity, speed * Time.deltaTime);
 
         controller.Move(velocity);
-
-        applyInput = false;
+        Debug.Log(controller.velocity.magnitude);
     }
 
     public void SetSprint(bool active)
@@ -103,13 +104,11 @@ public class MovementController : MonoBehaviour
 
     public void SetInput(float horizontal, float vertical)
     {
-        velocity = new Vector3(horizontal * speed * Time.smoothDeltaTime, velocity.y, vertical * speed * Time.smoothDeltaTime);
-
-        applyInput = true;
+        velocity = new Vector3(horizontal * speed * Time.deltaTime, velocity.y, vertical * speed * Time.deltaTime);
     }
 
     public void Jump()
     {
-        velocity.y = jumpForce * Time.smoothDeltaTime;
+        velocity.y = jumpForce * Time.deltaTime;
     }
 }

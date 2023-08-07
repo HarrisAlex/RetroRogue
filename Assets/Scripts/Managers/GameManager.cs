@@ -48,7 +48,7 @@ public class GameManager : MonoBehaviour
         dungeon = dungeonGenerator.Generate();
 
         // Render dungeon
-        //playerSpawnPosition = dungeonRenderer.RenderDungeon(dungeon);
+        playerSpawnPosition = dungeonRenderer.RenderDungeon(dungeon);
 
         // Spawn Player and register torch with light manager
         player = Instantiate(playerPrefab, playerSpawnPosition, Quaternion.identity, null).transform;

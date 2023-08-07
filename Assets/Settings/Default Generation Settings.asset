@@ -12,14 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 11dc3bfce950a6847804355972c88b15, type: 3}
   m_Name: Default Generation Settings
   m_EditorClassIdentifier: 
-  seed: 0
+  seed: 1
   roomCount: 50
-  gridWidth: 512
-  gridHeight: 512
+  gridWidth: 256
+  gridHeight: 256
   maxRoomWidth: 25
   maxRoomHeight: 25
   minRoomWidth: 7
   minRoomHeight: 7
   maxRoomAttempts: 5
-  maxHallwayExpansion: 1
+  maxHallwayExpansion: 3
   extraHallwayGenerationChance: 10

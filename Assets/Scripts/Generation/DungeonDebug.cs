@@ -14,12 +14,14 @@ namespace Assets.Scripts.Generation
         public bool drawWallTiles = false;
         public bool drawFloorTiles = false;
         public bool hideWalls = false;
+        public bool hideFloor = false;
         public bool drawEdges = false;
         public bool drawRooms = false;
 
         public float spacing = 0.1f;
 
         private static GameObject wallsContainer;
+        private static GameObject floorContainer;
 
         private void OnValidate()
         {
@@ -42,6 +44,7 @@ namespace Assets.Scripts.Generation
             DrawWallsTiles();
             DrawFloorTiles();
             ToggleWalls();
+            ToggleFloor();
             DrawEdges();
             DrawRooms();
         }
@@ -83,6 +86,19 @@ namespace Assets.Scripts.Generation
                 wallsContainer.SetActive(!instance.hideWalls);
         }
 
+        public static void ToggleFloor()
+        {
+            if (floorContainer == null)
+            {
+                floorContainer = GameObject.Find("Floor");
+
+                if (floorContainer == null) return;
+            }
+
+            if (instance.hideFloor == floorContainer.activeInHierarchy)
+                floorContainer.SetActive(!instance.hideFloor);
+        }
+
         public static void DrawEdges()
         {
             if (!instance.drawEdges) return;
@@ -114,6 +130,18 @@ namespace Assets.Scripts.Generation
             Debug.DrawLine(bottomRight, bottomLeft, color, time);
             Debug.DrawLine(bottomLeft, topLeft, color, time);
             Debug.DrawLine(topLeft, topRight, color, time);
+        }
+
+        public static void DrawText(string text, Vertex position)
+        {
+            GameObject go = new("Text");
+            go.transform.position = position.ToVector();
+            go.transform.localScale = new(0.4f, 0.4f, 1f);
+            go.transform.eulerAngles = new(90, 0, 0);
+
+            TextMesh textComponent = go.AddComponent<TextMesh>();
+            textComponent.text = text;
+            textComponent.fontSize = 24;
         }
 
         private static bool InstanceVariablesSet()

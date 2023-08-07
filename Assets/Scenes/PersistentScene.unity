@@ -134,7 +134,7 @@ GameObject:
   - component: {fileID: 74884398}
   - component: {fileID: 74884397}
   m_Layer: 0
-  m_Name: GameObject
+  m_Name: Pickup
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -548,11 +548,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   enableDebugging: 0
-  drawWallTiles: 1
-  drawFloorTiles: 1
+  drawWallTiles: 0
+  drawFloorTiles: 0
   hideWalls: 0
+  hideFloor: 0
   drawEdges: 0
-  drawRooms: 1
+  drawRooms: 0
   spacing: 0.05
 --- !u!114 &838776642
 MonoBehaviour:

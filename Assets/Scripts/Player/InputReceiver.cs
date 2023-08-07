@@ -26,13 +26,22 @@ public class InputReceiver : MonoBehaviour
 
         if (Input.GetButtonDown("Crouch")) movementController.ToggleCrouch();
 
-        // Handle mouse input
-        lookController.SetInput(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y"));
 
         // Handle weapon input
         if (Input.GetButtonDown("Attack")) combatController.Attack();
 
         if (Input.GetButtonDown("Block")) combatController.StartBlock();
         else if (Input.GetButtonUp("Block")) combatController.StopBlock();
+
+        movementController.Run();
+        combatController.Run();
+    }
+
+    private void LateUpdate()
+    {
+        // Handle mouse input
+        lookController.SetInput(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y"));
+
+        lookController.Run();
     }
 }
