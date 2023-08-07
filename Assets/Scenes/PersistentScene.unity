@@ -547,13 +547,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: da03b06209aac1842b64f9a164064500, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enableDebugging: 1
+  enableDebugging: 0
   drawWallTiles: 1
-  drawCornerTiles: 1
   drawFloorTiles: 1
   hideWalls: 0
   drawEdges: 0
-  drawRooms: 0
+  drawRooms: 1
   spacing: 0.05
 --- !u!114 &838776642
 MonoBehaviour:

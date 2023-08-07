@@ -12,7 +12,6 @@ namespace Assets.Scripts.Generation
 
         public bool enableDebugging = false;
         public bool drawWallTiles = false;
-        public bool drawCornerTiles = false;
         public bool drawFloorTiles = false;
         public bool hideWalls = false;
         public bool drawEdges = false;
@@ -41,7 +40,6 @@ namespace Assets.Scripts.Generation
             if (!InstanceVariablesSet()) return;
 
             DrawWallsTiles();
-            DrawCornerTiles();
             DrawFloorTiles();
             ToggleWalls();
             DrawEdges();
@@ -54,24 +52,9 @@ namespace Assets.Scripts.Generation
 
             IterateArea(0, 0, dungeon.GetWidth() - 1, dungeon.GetHeight() - 1, (int x, int y) =>
             {
-                if (!IsWall(dungeon.GetTile(x, y))) return;
+                if (dungeon.GetTile(x, y) != TileType.Wall) return;
 
                 DrawRectangle(x, y, 1, 1, 0, Color.magenta);
-            });
-        }
-
-        public static void DrawCornerTiles()
-        {
-            if (!instance.drawCornerTiles) return;
-
-            IterateArea(0, 0, dungeon.GetWidth() - 1, dungeon.GetHeight() - 1, (int x, int y) =>
-            {
-                if (!IsCorner(dungeon.GetTile(x, y))) return;
-
-                if (dungeon.GetTile(x, y).HasFlag(TileType.Wall))
-                    DrawRectangle(x, y, 1, 1, 0, Color.green);
-                else
-                    DrawRectangle(x, y, 1, 1, 0, Color.yellow);
             });
         }
 
@@ -81,7 +64,7 @@ namespace Assets.Scripts.Generation
 
             IterateArea(0, 0, dungeon.GetWidth() - 1, dungeon.GetHeight() - 1, (int x, int y) =>
             {
-                if (!IsFloor(dungeon.GetTile(x, y))) return;
+                if (dungeon.GetTile(x, y) != TileType.Floor) return;
 
                 DrawRectangle(x, y, 1, 1, 0, Color.white);
             });

@@ -6,6 +6,8 @@ namespace Assets.Scripts.Generation
     [CreateAssetMenu(menuName = "Dungeon/Settings")]
     public class GenerationSettings : ScriptableObject
     {
+        [Range(0, 3)]
+        public int seed = 0;
         public int roomCount = 20;
         public int gridWidth = 128;
         public int gridHeight = 128;

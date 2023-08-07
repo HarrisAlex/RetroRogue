@@ -250,40 +250,6 @@ namespace Assets.Scripts.Generation
                     }
                 }
 
-                foreach (Node<Vertex> node in nodes)
-                {
-                    DungeonDebug.DrawRectangle(node.position.x, node.position.y, 1, 1, 500, UnityEngine.Color.red);
-                }
-
-                //// Add neighbors by room
-                //foreach (Node<Vertex> node in nodes)
-                //{
-                //    foreach (Node<Vertex> neighbor in nodes)
-                //    {
-                //        foreach (Room room in rooms)
-                //        {
-                //            if (room.ContainsPoint(node.position) && room.ContainsPoint(neighbor.position))
-                //            {
-                //                node.neighbors.Add(neighbor);
-                //            }
-                //        }
-                //    }
-                //}
-
-                //// Add neighbors by edge sharing
-                //foreach (Node<Vertex> node in nodes)
-                //{
-                //    foreach (Node<Vertex> neighbor in nodes)
-                //    {
-                //        foreach (Edge edge in edges)
-                //        {
-                //            if (!edge.PointIsOnEdge(neighbor.position)) continue;
-
-                //            node.neighbors.Add(neighbor);
-                //        }
-                //    }
-                //}
-
                 pathfinding = new(nodes);
 
                 this.settings = settings;
@@ -375,22 +341,6 @@ namespace Assets.Scripts.Generation
                     function(x, y);
                 }
             }
-        }
-
-        public static bool IsFloor(TileType type)
-        {
-            return type.HasFlag(TileType.HallwayFloor) || type.HasFlag(TileType.RoomFloor);
-        }
-
-        public static bool IsCorner(TileType type)
-        {
-            return type.HasFlag(TileType.BottomLeftCorner) || type.HasFlag(TileType.BottomRightCorner)
-                || type.HasFlag(TileType.TopLeftCorner) || type.HasFlag(TileType.TopRightCorner);
-        }
-
-        public static bool IsWall(TileType type)
-        {
-            return type.HasFlag(TileType.Wall) || IsCorner(type);
         }
     }
 }
