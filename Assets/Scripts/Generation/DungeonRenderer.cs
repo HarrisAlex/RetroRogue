@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using static Assets.Scripts.Generation.DungeonGeneration;
+using System.Collections.Generic;
 
 namespace Assets.Scripts.Generation
 {
@@ -13,6 +14,8 @@ namespace Assets.Scripts.Generation
         private Transform wallRoot;
         private readonly float diagonalScale = Mathf.Sqrt(2);
 
+        private List<DungeonGeneration.Light> lights;
+
         public Vector3 RenderDungeon(Dungeon dungeon)
         {
             if (root != null)
@@ -23,6 +26,8 @@ namespace Assets.Scripts.Generation
 
             int width = dungeon.GetWidth();
             int height = dungeon.GetHeight();
+
+            lights = dungeon.lights;
 
             // Wall vars
             IterateArea(0, 0, width - 1, height - 1, (int x, int y) =>
@@ -79,13 +84,11 @@ namespace Assets.Scripts.Generation
                     CreateWall(1, x + 1, y, 180, "B");
             });
 
-            Transform floor = CreatePlane(width, height, floorMaterial, 120);
+            Transform floor = CreatePlane(Vector3.zero, Quaternion.Euler(0, 90, 180), width, height, floorMaterial, 120);
             floor.gameObject.AddComponent<BoxCollider>();
-            floor.eulerAngles = new Vector3(0, 90, 180);
             floor.name = "Floor";
 
-            Transform ceiling = CreatePlane(width, height, ceilingMaterial, 120);
-            ceiling.position = new Vector3(0, 3, 0);
+            Transform ceiling = CreatePlane(new Vector3(0, 3, 0), Quaternion.identity, width, height, ceilingMaterial, 120);
 
             return new Vector3(dungeon.spawn.x, 0, dungeon.spawn.y);
         }
@@ -98,9 +101,7 @@ namespace Assets.Scripts.Generation
                 wallRoot.parent = root;
             }
 
-            Transform wall = CreatePlane(scale, 3, wallMaterial);
-            wall.position = new Vector3(x, 0, y);
-            wall.eulerAngles = new Vector3(270, angle, 0);
+            Transform wall = CreatePlane(new Vector3(x, 0, y), Quaternion.Euler(270, angle, 0), scale, 3, wallMaterial, 2);
             wall.parent = wallRoot;
 
 #if UNITY_EDITOR
@@ -119,23 +120,6 @@ namespace Assets.Scripts.Generation
             transform.name = string.Concat("(", x, ", ", y, ") ", suffix);
         }
 
-        private Light CreateLight(int x, int y)
-        {
-            if (root == null)
-                root = new GameObject("Dungeon").transform;
-
-            Transform go = new GameObject("Light").transform;
-            go.position = new Vector3(x, 1.5f, y);
-            go.parent = root;
-
-            Light light = go.gameObject.AddComponent<Light>();
-            light.type = LightType.Point;
-            light.range = 8;
-            light.intensity = 3;
-
-            return light;
-        }
-
         // Mesh generation
         private struct MeshDescription
         {
@@ -143,6 +127,7 @@ namespace Assets.Scripts.Generation
             public Vector3[] vertices;
             public int[] triangles;
             public Vector2[] uvs;
+            public Color32[] colors;
         }
 
         private int Square(int number)
@@ -150,7 +135,7 @@ namespace Assets.Scripts.Generation
             return number * number;
         }
 
-        private Transform CreatePlane(float width, float height, Material material, int subvision = 0)
+        private Transform CreatePlane(Vector3 position, Quaternion rotation, float width, float height, Material material, int subvision = 0)
         {
             if (root == null)
                 root = new GameObject("Dungeon").transform;
@@ -164,15 +149,30 @@ namespace Assets.Scripts.Generation
             description.vertices = new Vector3[Square(subvision + 2)];
             description.triangles = new int[2 * Square(subvision + 1) * 3];
             description.uvs = new Vector2[description.vertices.Length];
+            description.colors = new Color32[description.vertices.Length];
 
             int vertexIterations = subvision + 1;
+            Color currentColor;
+            float distance;
 
             for (int x = 0, i = 0; x <= vertexIterations; x++)
             {
                 for (int y = 0; y <= vertexIterations; y++, i++)
                 {
-                    description.vertices[i] = new Vector3(Mathf.Lerp(0, width, (float)x / vertexIterations), 0, Mathf.Lerp(0, height, (float)y / vertexIterations));
+                    description.vertices[i] = new Vector3(Mathf.Lerp(0, width, (float)x / vertexIterations) + position.x, position.y, Mathf.Lerp(0, height, (float)y / vertexIterations) + position.z);
+                    description.vertices[i] = rotation * (description.vertices[i] - position) + position;
                     description.uvs[i] = new Vector2(x * (width / vertexIterations), y * (height / vertexIterations));
+
+                    currentColor = Color.black;
+                    foreach (DungeonGeneration.Light light in lights)
+                    {
+                        distance = (new Vector3(light.position.x, 1.5f, light.position.y) - description.vertices[i]).sqrMagnitude;
+
+                        currentColor.r = Mathf.Max(Mathf.Sqrt((Mathf.Pow(currentColor.r, 2) + Mathf.Pow((1 / distance) * light.intensity, 2)) / 2) * (light.color.r / 255), currentColor.r);
+                        currentColor.g = Mathf.Max(Mathf.Sqrt((Mathf.Pow(currentColor.g, 2) + Mathf.Pow((1 / distance) * light.intensity, 2)) / 2) * (light.color.g / 255), currentColor.g);
+                        currentColor.b = Mathf.Max(Mathf.Sqrt((Mathf.Pow(currentColor.b, 2) + Mathf.Pow((1 / distance) * light.intensity, 2)) / 2) * (light.color.b / 255), currentColor.b);
+                    }
+                    description.colors[i] = currentColor;
                 }
             }
 
@@ -208,8 +208,14 @@ namespace Assets.Scripts.Generation
             mesh.RecalculateNormals();
             mesh.RecalculateTangents();
             mesh.uv = description.uvs;
+            mesh.colors32 = description.colors;
 
             return go.transform;
         }
+
+        //private Vector3 GetClosestPointOnRectangle(Vector3 position, Rectangle rectangle, Vector3 point)
+        //{
+        //    rectangle
+        //}
     }
 }

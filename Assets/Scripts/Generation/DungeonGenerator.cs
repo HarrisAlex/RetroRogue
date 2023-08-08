@@ -23,6 +23,7 @@ namespace Assets.Scripts.Generation
         private List<Room> rooms;
         private List<Edge> edges;
         private HashSet<Edge> selectedEdges;
+        private List<Light> lights;
 
         public DungeonGenerator(GenerationSettings settings)
         {
@@ -31,8 +32,6 @@ namespace Assets.Scripts.Generation
 
         public Dungeon Generate()
         {
-            DateTime start = DateTime.UtcNow;
-
             int seed = Settings.seed;
 
             if (seed == 0)
@@ -157,17 +156,23 @@ namespace Assets.Scripts.Generation
                     });
             }
 
+            // Add lights
+            lights = new();
+            foreach (Room room in rooms)
+            {
+                lights.Add(new(room.GetCenter(), 8, new(212, 169, 106)));
+                lights.Add(new(new(room.GetCenter().x + 3, room.GetCenter().y + 5), 8, new(0, 255, 255)));
+            }
+
             // Add walls
             FillArea(0, 0, Settings.gridWidth - 1, Settings.gridHeight - 1, TileType.Wall, ShouldPlaceWall);
 
-            Dungeon dungeon = new(grid, selectedEdges, Settings, random, rooms);
+            Dungeon dungeon = new(grid, selectedEdges, Settings, random, rooms, lights);
 
 #if UNITY_EDITOR
             if (DungeonDebug.instance != null)
                 DungeonDebug.SetDungeon(dungeon);
 #endif
-
-            UnityEngine.Debug.Log("Time to generate: " + (DateTime.UtcNow - start).TotalMilliseconds);
 
             // Create dungeon struct
             return dungeon;

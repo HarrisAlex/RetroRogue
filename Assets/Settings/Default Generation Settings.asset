@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: Default Generation Settings
   m_EditorClassIdentifier: 
   seed: 1
-  roomCount: 50
-  gridWidth: 256
-  gridHeight: 256
+  roomCount: 100
+  gridWidth: 128
+  gridHeight: 128
   maxRoomWidth: 25
   maxRoomHeight: 25
   minRoomWidth: 7

@@ -83,7 +83,6 @@ public class MovementController : MonoBehaviour, IController
         velocity = Vector3.ClampMagnitude(velocity, speed * Time.deltaTime);
 
         controller.Move(velocity);
-        Debug.Log(controller.velocity.magnitude);
     }
 
     public void SetSprint(bool active)

@@ -266,7 +266,7 @@ namespace Assets.Scripts.Generation
                 float triangleBVD = new Triangle(b, vertex, d).Area;
                 float triangleAVB = new Triangle(a, vertex, b).Area;
 
-                return Area > triangleAVC + triangleDVC + triangleBVD + triangleAVB;                
+                return Area > triangleAVC + triangleDVC + triangleBVD + triangleAVB;
             }
         }
 
@@ -348,6 +348,36 @@ namespace Assets.Scripts.Generation
             }
         }
 
+        public class Light
+        {
+            public Vertex position;
+            public float intensity;
+            public UnityEngine.Color color;
+
+            public Light() { }
+
+            public Light(Vertex position, float intensity, UnityEngine.Color color)
+            {
+                this.position = position;
+                this.intensity = intensity;
+                this.color = color;
+            }
+        }
+
+        public class AreaLight : Light
+        {
+            public Rectangle emissionShape;
+
+            public AreaLight(Vertex position, float intensity, UnityEngine.Color color, Rectangle emissionShape)
+            {
+                this.position = position;
+                this.intensity = intensity;
+                this.color = color;
+                this.emissionShape = emissionShape;
+            }
+        }
+
+
         public class Dungeon
         {
             public readonly Vertex spawn;
@@ -357,12 +387,14 @@ namespace Assets.Scripts.Generation
             public readonly GenerationSettings settings;
             public readonly HashSet<Edge> edges;
             public readonly List<Room> rooms;
+            public readonly List<Light> lights;
 
-            public Dungeon(TileType[,] grid, HashSet<Edge> edges, GenerationSettings settings, Random random, List<Room> rooms)
+            public Dungeon(TileType[,] grid, HashSet<Edge> edges, GenerationSettings settings, Random random, List<Room> rooms, List<Light> lights)
             {
                 this.grid = grid;
                 this.edges = edges;
                 this.rooms = rooms;
+                this.lights = lights;
 
                 List<Vertex> vertices = new();
                 foreach (Edge edge in edges)
