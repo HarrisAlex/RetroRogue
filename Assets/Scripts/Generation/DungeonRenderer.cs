@@ -153,7 +153,9 @@ namespace Assets.Scripts.Generation
 
             int vertexIterations = subvision + 1;
             Color currentColor;
-            float distance;
+            Vector3 closestPoint;
+            Vertex closestVertexA, closestVertexB;
+            float distance, lowestDistance, secondLowestDistance;
 
             for (int x = 0, i = 0; x <= vertexIterations; x++)
             {
@@ -166,7 +168,41 @@ namespace Assets.Scripts.Generation
                     currentColor = Color.black;
                     foreach (DungeonGeneration.Light light in lights)
                     {
-                        distance = (new Vector3(light.position.x, 1.5f, light.position.y) - description.vertices[i]).sqrMagnitude;
+                        if (light is AreaLight)
+                        {
+                            lowestDistance = float.MaxValue;
+                            secondLowestDistance = float.MaxValue;
+                            closestVertexA = default;
+                            closestVertexB = default;
+                            foreach (Vertex vertex in ((AreaLight)light).emissionShape.GetCornerVertices())
+                            {
+                                distance = (vertex.ToVector(1.5f) - description.vertices[i]).sqrMagnitude;
+
+                                if (distance < lowestDistance)
+                                {
+                                    lowestDistance = distance;
+                                    closestVertexA = vertex;
+                                }
+                                else if (distance < secondLowestDistance)
+                                {
+                                    secondLowestDistance = distance;
+                                    closestVertexB = vertex;
+                                }
+                            }
+                            Edge edge = new Edge(closestVertexA, closestVertexB).Normalized;
+                            var v = description.vertices[i]
+
+                            float slope = -1 / edge.Slope;
+
+
+                            closestPoint = Vector3.Lerp(closestVertexA.ToVector(1.5f), closestVertexB.ToVector(1.5f), 0.5f);
+
+                            distance = (closestPoint - description.vertices[i]).sqrMagnitude;
+                        }
+                        else
+                        {
+                            distance = (new Vector3(light.position.x, 1.5f, light.position.y) - description.vertices[i]).sqrMagnitude;
+                        }
 
                         currentColor.r = Mathf.Max(Mathf.Sqrt((Mathf.Pow(currentColor.r, 2) + Mathf.Pow((1 / distance) * light.intensity, 2)) / 2) * (light.color.r / 255), currentColor.r);
                         currentColor.g = Mathf.Max(Mathf.Sqrt((Mathf.Pow(currentColor.g, 2) + Mathf.Pow((1 / distance) * light.intensity, 2)) / 2) * (light.color.g / 255), currentColor.g);

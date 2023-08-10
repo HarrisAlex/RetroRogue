@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using static Assets.Scripts.Generation.Dungeon3D;
 
 namespace Assets.Scripts.Generation
 {
@@ -14,7 +15,7 @@ namespace Assets.Scripts.Generation
             public float y;
 
             public static Vertex Zero { get => new(0, 0); }
-            public static Vertex NegativeInfinity { get => new(float.MinValue, float.MinValue); }
+            public static Vertex Invalid { get => new(float.MinValue, float.MinValue); }
 
             public Vertex(float x, float y)
             {
@@ -27,9 +28,9 @@ namespace Assets.Scripts.Generation
                 return new Vertex(vector.x, vector.z);
             }
 
-            public UnityEngine.Vector3 ToVector()
+            public UnityEngine.Vector3 ToVector(float yOffset = 0)
             {
-                return new UnityEngine.Vector3(x, 0, y);
+                return new UnityEngine.Vector3(x, yOffset, y);
             }
 
             public Coordinate ToCoordinate()
@@ -59,6 +60,21 @@ namespace Assets.Scripts.Generation
             public static bool operator !=(Vertex a, Vertex b)
             {
                 return !Approximately(a, b);
+            }
+
+            public static Vertex operator +(Vertex a, Vertex b)
+            {
+                return new Vertex(a.x + b.x, a.y + b.y);
+            }
+
+            public static Vertex operator -(Vertex a, Vertex b)
+            {
+                return new Vertex(a.x - b.x, a.y - b.y);
+            }
+
+            public static Vertex operator /(Vertex a, float f)
+            {
+                return new Vertex(a.x / f, a.y / f);
             }
         }
 
@@ -130,6 +146,15 @@ namespace Assets.Scripts.Generation
                 }
             }
 
+            public Edge Normalized
+            {
+                get
+                {
+                    float divisor = MathF.Sqrt((v.x - u.x) + (v.y - u.y));
+                    return new Edge(u, u + (v / divisor));
+                }
+            }
+
             public Edge(Vertex u, Vertex v)
             {
                 this.u = u;
@@ -146,7 +171,7 @@ namespace Assets.Scripts.Generation
             {
                 // Parallel lines
                 if (Approximately(Slope, edge.Slope))
-                    return Vertex.NegativeInfinity;
+                    return Vertex.Invalid;
 
                 float xIntersection = (edge.u.x - u.x) / (Slope - edge.Slope);
                 float yIntersection = Slope * xIntersection + u.x;
@@ -346,17 +371,29 @@ namespace Assets.Scripts.Generation
             {
                 return new Vertex(xPosition + (width / 2), yPosition + (height / 2));
             }
+
+            public Vertex[] GetCornerVertices()
+            {
+                Vertex[] vertices = new Vertex[4];
+
+                vertices[0] = new(xPosition, yPosition);
+                vertices[1] = new(xPosition, yPosition + height);
+                vertices[2] = new(xPosition + width, yPosition + height);
+                vertices[3] = new(xPosition + width, height);
+
+                return vertices;
+            }
         }
 
         public class Light
         {
-            public Vertex position;
+            public Vertex3D position;
             public float intensity;
             public UnityEngine.Color color;
 
             public Light() { }
 
-            public Light(Vertex position, float intensity, UnityEngine.Color color)
+            public Light(Vertex3D position, float intensity, UnityEngine.Color color)
             {
                 this.position = position;
                 this.intensity = intensity;
@@ -368,12 +405,12 @@ namespace Assets.Scripts.Generation
         {
             public Rectangle emissionShape;
 
-            public AreaLight(Vertex position, float intensity, UnityEngine.Color color, Rectangle emissionShape)
+            public AreaLight(Vertex3D position, float intensity, UnityEngine.Color color, float width, float height)
             {
                 this.position = position;
                 this.intensity = intensity;
                 this.color = color;
-                this.emissionShape = emissionShape;
+                emissionShape = new(position.x - (width / 2), position.y - (width / 2), width, height);
             }
         }
 
@@ -418,7 +455,7 @@ namespace Assets.Scripts.Generation
                         foreach (Edge roomEdge in room.GetEdges())
                         {
                             intersection = edge.FindIntersection(roomEdge);
-                            if (Approximately(intersection, Vertex.NegativeInfinity)) continue;
+                            if (Approximately(intersection, Vertex.Invalid)) continue;
 
                             nodes.Add(new(intersection));
                         }
@@ -505,6 +542,11 @@ namespace Assets.Scripts.Generation
         public static bool Approximately(Vertex a, Vertex b)
         {
             return Approximately(a.x, b.x) && Approximately(a.y, b.y);
+        }
+
+        public static bool Approximately(Vertex3D a, Vertex3D b)
+        {
+            return Approximately(a.x, b.x) && Approximately(a.y, b.y) && Approximately(a.z, b.z);
         }
 
         public static void IterateArea(int x1, int y1, int x2, int y2, Action<int, int> function)

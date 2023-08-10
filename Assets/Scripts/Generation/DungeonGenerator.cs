@@ -160,8 +160,9 @@ namespace Assets.Scripts.Generation
             lights = new();
             foreach (Room room in rooms)
             {
-                lights.Add(new(room.GetCenter(), 8, new(212, 169, 106)));
-                lights.Add(new(new(room.GetCenter().x + 3, room.GetCenter().y + 5), 8, new(0, 255, 255)));
+                //lights.Add(new(room.GetCenter(), 8, new(212, 169, 106)));
+                //lights.Add(new(new(room.GetCenter().x + 3, room.GetCenter().y + 5), 8, new(0, 255, 255)));
+                lights.Add(new AreaLight(new(room.GetCenter().x - 3, room.GetCenter().y + 2), 8, new(255, 255, 0), 5, 5));
             }
 
             // Add walls

@@ -2,23 +2,19 @@ Shader "Custom/DungeonDiffuse"
 {
 	Properties
 	{
-		_MainTex("Texture", 2D) = "white" {}
+		_MainTex("Albedo", 2D) = "white" {}
 	}
 
-		SubShader
+	SubShader
 	{
 		Pass
 		{
-			Tags
-			{
-				"LightMode" = "ForwardBase"
-			}
 			CGPROGRAM
 
 			#pragma	vertex Vertex
 			#pragma fragment Fragment
 
-			#include "UnityStandardBRDF.cginc"
+			#include "UnityCG.cginc"
 
 			sampler2D _MainTex;
 			float4 _MainTex_ST;
@@ -32,7 +28,7 @@ Shader "Custom/DungeonDiffuse"
 
 			struct Interpolators
 			{
-				float4 position : SV_POSITION;
+				float4 position : POSITION;
 				float4 color: COLOR0;
 				float2 uv : TEXCOORD0;
 			};
@@ -43,6 +39,7 @@ Shader "Custom/DungeonDiffuse"
 				i.position = UnityObjectToClipPos(v.position);
 				i.uv = v.uv * _MainTex_ST.yx;
 				i.color = v.color;
+
 				return i;
 			}
 
