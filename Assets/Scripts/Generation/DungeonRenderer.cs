@@ -153,9 +153,7 @@ namespace Assets.Scripts.Generation
 
             int vertexIterations = subvision + 1;
             Color currentColor;
-            Vector3 closestPoint;
-            Vertex closestVertexA, closestVertexB;
-            float distance, lowestDistance, secondLowestDistance;
+            float distance, attenuation;
 
             for (int x = 0, i = 0; x <= vertexIterations; x++)
             {
@@ -170,43 +168,29 @@ namespace Assets.Scripts.Generation
                     {
                         if (light is AreaLight)
                         {
-                            lowestDistance = float.MaxValue;
-                            secondLowestDistance = float.MaxValue;
-                            closestVertexA = default;
-                            closestVertexB = default;
-                            foreach (Vertex vertex in ((AreaLight)light).emissionShape.GetCornerVertices())
-                            {
-                                distance = (vertex.ToVector(1.5f) - description.vertices[i]).sqrMagnitude;
+                            distance = (light.position.ToVector() - description.vertices[i]).sqrMagnitude;
 
-                                if (distance < lowestDistance)
-                                {
-                                    lowestDistance = distance;
-                                    closestVertexA = vertex;
-                                }
-                                else if (distance < secondLowestDistance)
-                                {
-                                    secondLowestDistance = distance;
-                                    closestVertexB = vertex;
-                                }
-                            }
-                            Edge edge = new Edge(closestVertexA, closestVertexB).Normalized;
-                            var v = description.vertices[i]
+                            Vector3 normal = ((AreaLight)light).emissionShape.Normal.ToVector();
+                            float cosine = Mathf.Acos(Vector3.Dot(normal, description.vertices[i] - light.position.ToVector())
+                                / (normal.magnitude * (description.vertices[i] - light.position.ToVector()).magnitude));
 
-                            float slope = -1 / edge.Slope;
+                            float surfaceArea = Vector3.Dot((light.position.ToVector() - description.vertices[i]).normalized, Vector3.up);
 
+                            if (surfaceArea < 0)
+                                surfaceArea = 0;
 
-                            closestPoint = Vector3.Lerp(closestVertexA.ToVector(1.5f), closestVertexB.ToVector(1.5f), 0.5f);
-
-                            distance = (closestPoint - description.vertices[i]).sqrMagnitude;
+                            currentColor.r = Mathf.Max(AverageColorChannel(currentColor.r, light.color.r, distance, light.intensity, cosine, surfaceArea), currentColor.r);
+                            currentColor.g = Mathf.Max(AverageColorChannel(currentColor.g, light.color.g, distance, light.intensity, cosine, surfaceArea), currentColor.g);
+                            currentColor.b = Mathf.Max(AverageColorChannel(currentColor.b, light.color.b, distance, light.intensity, cosine, surfaceArea), currentColor.b);
                         }
                         else
                         {
                             distance = (new Vector3(light.position.x, 1.5f, light.position.y) - description.vertices[i]).sqrMagnitude;
                         }
 
-                        currentColor.r = Mathf.Max(Mathf.Sqrt((Mathf.Pow(currentColor.r, 2) + Mathf.Pow((1 / distance) * light.intensity, 2)) / 2) * (light.color.r / 255), currentColor.r);
-                        currentColor.g = Mathf.Max(Mathf.Sqrt((Mathf.Pow(currentColor.g, 2) + Mathf.Pow((1 / distance) * light.intensity, 2)) / 2) * (light.color.g / 255), currentColor.g);
-                        currentColor.b = Mathf.Max(Mathf.Sqrt((Mathf.Pow(currentColor.b, 2) + Mathf.Pow((1 / distance) * light.intensity, 2)) / 2) * (light.color.b / 255), currentColor.b);
+                        currentColor.r = Mathf.Max(AverageColorChannel(currentColor.r, light.color.r, distance, light.intensity), currentColor.r);
+                        currentColor.g = Mathf.Max(AverageColorChannel(currentColor.g, light.color.g, distance, light.intensity), currentColor.g);
+                        currentColor.b = Mathf.Max(AverageColorChannel(currentColor.b, light.color.b, distance, light.intensity), currentColor.b);
                     }
                     description.colors[i] = currentColor;
                 }
@@ -226,6 +210,16 @@ namespace Assets.Scripts.Generation
             }
 
             return GenerateMesh(description, material, root);
+        }
+
+        private float AverageColorChannel(float currentColor, float newColor, float distance, float intensity)
+        {
+            return Mathf.Sqrt((Mathf.Pow(currentColor, 2) + Mathf.Pow((1 / distance) * intensity, 2) / 2) * (newColor / 255));
+        }
+
+        private float AverageColorChannel(float currentColor, float newColor, float distance, float intensity, float cosine, float surfaceAreaFactor)
+        {
+            return Mathf.Sqrt(Mathf.Pow(currentColor, 2) + Mathf.Pow(intensity * cosine * surfaceAreaFactor * (1 / distance) * newColor, 2) * newColor / 255);
         }
 
         private Transform GenerateMesh(MeshDescription description, Material material, Transform root)
@@ -248,10 +242,5 @@ namespace Assets.Scripts.Generation
 
             return go.transform;
         }
-
-        //private Vector3 GetClosestPointOnRectangle(Vector3 position, Rectangle rectangle, Vector3 point)
-        //{
-        //    rectangle
-        //}
     }
 }

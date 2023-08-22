@@ -162,7 +162,7 @@ namespace Assets.Scripts.Generation
             {
                 //lights.Add(new(room.GetCenter(), 8, new(212, 169, 106)));
                 //lights.Add(new(new(room.GetCenter().x + 3, room.GetCenter().y + 5), 8, new(0, 255, 255)));
-                lights.Add(new AreaLight(new(room.GetCenter().x - 3, room.GetCenter().y + 2), 8, new(255, 255, 0), 5, 5));
+                lights.Add(new AreaLight(new(room.Center.x, 1.5f, room.Center.y), 1, new(212, 169, 106), 1, 1, 180));
             }
 
             // Add walls
@@ -226,7 +226,7 @@ namespace Assets.Scripts.Generation
             // Create midpoint for center of each room
             foreach (Room room in rooms)
             {
-                vertices.Add(room.GetCenter());
+                vertices.Add(room.Center);
             }
 
             List<Triangle> triangles = new();
@@ -466,7 +466,7 @@ namespace Assets.Scripts.Generation
             if (rooms.Count < 1)
                 return false;
 
-            center = rooms[random.Next(0, rooms.Count - 1)].GetCenter();
+            center = rooms[random.Next(0, rooms.Count - 1)].Center;
             return true;
         }
     }

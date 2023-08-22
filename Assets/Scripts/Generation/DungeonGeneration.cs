@@ -303,6 +303,8 @@ namespace Assets.Scripts.Generation
             public int width;
             public int height;
 
+            public Vertex Center => new(xPosition + (width / 2), yPosition + (height / 2));
+
             public Room() { }
 
             public Room(int xPosition, int yPosition, int width, int height)
@@ -312,11 +314,6 @@ namespace Assets.Scripts.Generation
 
                 this.width = width;
                 this.height = height;
-            }
-
-            public Vertex GetCenter()
-            {
-                return new Vertex(xPosition + (width / 2), yPosition + (height / 2));
             }
 
             public bool WithinGrid(int gridWidth, int gridHeight)
@@ -403,14 +400,14 @@ namespace Assets.Scripts.Generation
 
         public class AreaLight : Light
         {
-            public Rectangle emissionShape;
+            public Rectangle3D emissionShape;
 
-            public AreaLight(Vertex3D position, float intensity, UnityEngine.Color color, float width, float height)
+            public AreaLight(Vertex3D position, float intensity, UnityEngine.Color color, float width, float height, float rotation)
             {
                 this.position = position;
                 this.intensity = intensity;
                 this.color = color;
-                emissionShape = new(position.x - (width / 2), position.y - (width / 2), width, height);
+                emissionShape = new(position, width, height, rotation);
             }
         }
 
@@ -559,7 +556,6 @@ namespace Assets.Scripts.Generation
                 }
             }
         }
-
 
         public enum Extrema
         {
