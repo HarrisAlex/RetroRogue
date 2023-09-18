@@ -282,7 +282,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   walkSpeed: 2
-  springSpeed: 4.5
+  sprintSpeed: 4.5
   crouchSpeed: 1.5
   jumpForce: 6
 --- !u!143 &384370833
@@ -505,7 +505,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b58b5a0c0eb95b141aecdb5d0cea0c53, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  dungeonSettings: {fileID: 11400000, guid: 662e1633aa8b07f4fbcdbadae2790f17, type: 2}
+  generationSettings: {fileID: 11400000, guid: 662e1633aa8b07f4fbcdbadae2790f17, type: 2}
+  renderingSettings: {fileID: 11400000, guid: cbc8e6a9646835a4d861139776954443, type: 2}
   playerPrefab: {fileID: 2755955402563891663, guid: 9e456c5da703271479a300331b0118d1, type: 3}
 --- !u!114 &838776639
 MonoBehaviour:
@@ -535,6 +536,7 @@ MonoBehaviour:
   floorMaterial: {fileID: 2100000, guid: c06c2ce82be9f1d44abf50a55ed09bf4, type: 2}
   ceilingMaterial: {fileID: 2100000, guid: c06c2ce82be9f1d44abf50a55ed09bf4, type: 2}
   wallMaterial: {fileID: 2100000, guid: c06c2ce82be9f1d44abf50a55ed09bf4, type: 2}
+  renderingSettings: {fileID: 0}
 --- !u!114 &838776641
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -386,31 +386,15 @@ namespace Assets.Scripts.Generation
         {
             public Vertex3D position;
             public float intensity;
-            public UnityEngine.Color color;
 
             public Light() { }
 
-            public Light(Vertex3D position, float intensity, UnityEngine.Color color)
+            public Light(Vertex3D position, float intensity)
             {
                 this.position = position;
                 this.intensity = intensity;
-                this.color = color;
             }
         }
-
-        public class AreaLight : Light
-        {
-            public Rectangle3D emissionShape;
-
-            public AreaLight(Vertex3D position, float intensity, UnityEngine.Color color, float width, float height, float rotation)
-            {
-                this.position = position;
-                this.intensity = intensity;
-                this.color = color;
-                emissionShape = new(position, width, height, rotation);
-            }
-        }
-
 
         public class Dungeon
         {
@@ -564,6 +548,7 @@ namespace Assets.Scripts.Generation
             xMaximum,
             yMaximum
         }
+
         public static float GetExtrema(List<Vertex> vertices, Extrema extremaType)
         {
             if (vertices == null) return float.MinValue;
@@ -608,6 +593,11 @@ namespace Assets.Scripts.Generation
             }
 
             return greatestExtrema;
+        }
+
+        public static float Lerp(float a, float b, float t)
+        {
+            return a + (b - a) * t;
         }
     }
 }

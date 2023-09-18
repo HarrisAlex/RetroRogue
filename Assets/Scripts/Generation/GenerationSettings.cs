@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Assets.Scripts.Generation
 {
-    [CreateAssetMenu(menuName = "Dungeon/Settings")]
+    [CreateAssetMenu(menuName = "Dungeon/Settings/Generation")]
     public class GenerationSettings : ScriptableObject
     {
         [Range(0, 3)]

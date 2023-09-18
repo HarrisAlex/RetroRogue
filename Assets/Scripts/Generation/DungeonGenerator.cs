@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using static Assets.Scripts.Generation.DungeonGeneration;
+using static Assets.Scripts.Generation.Dungeon3D;
 using Random = System.Random;
 
 namespace Assets.Scripts.Generation
@@ -14,7 +15,7 @@ namespace Assets.Scripts.Generation
 
     public class DungeonGenerator
     {
-        public GenerationSettings Settings { get; private set; }
+        public GenerationSettings GenerationSettings { get; private set; }
 
         // Generation
         private Random random;
@@ -25,14 +26,14 @@ namespace Assets.Scripts.Generation
         private HashSet<Edge> selectedEdges;
         private List<Light> lights;
 
-        public DungeonGenerator(GenerationSettings settings)
+        public DungeonGenerator(GenerationSettings generationSettings)
         {
-            Settings = settings;
+            GenerationSettings = generationSettings;
         }
 
         public Dungeon Generate()
         {
-            int seed = Settings.seed;
+            int seed = GenerationSettings.seed;
 
             if (seed == 0)
             {
@@ -44,16 +45,16 @@ namespace Assets.Scripts.Generation
 
             // Initialization of variables
             random = new Random(seed);
-            grid = new TileType[Settings.gridWidth, Settings.gridHeight];
+            grid = new TileType[GenerationSettings.gridWidth, GenerationSettings.gridHeight];
             rooms = new List<Room>();
 
 
             // Initialize grid
-            FillArea(0, 0, Settings.gridWidth - 1, Settings.gridHeight - 1, TileType.Void);
+            FillArea(0, 0, GenerationSettings.gridWidth - 1, GenerationSettings.gridHeight - 1, TileType.Void);
 
 
             // Create rooms
-            for (int i = 0; i < Settings.roomCount; i++)
+            for (int i = 0; i < GenerationSettings.roomCount; i++)
             {
                 Room newRoom = new();
 
@@ -129,7 +130,7 @@ namespace Assets.Scripts.Generation
             // Randomly add unecessary hallways based on chance
             foreach (Edge edge in remainingEdges)
             {
-                if (random.Next(0, 100) < Settings.extraHallwayGenerationChance)
+                if (random.Next(0, 100) < GenerationSettings.extraHallwayGenerationChance)
                     selectedEdges.Add(edge);
             }
 
@@ -137,7 +138,7 @@ namespace Assets.Scripts.Generation
             List<Hallway> hallways = new();
             foreach (Edge edge in selectedEdges)
             {
-                int expansion = random.Next(1, Settings.maxHallwayExpansion);
+                int expansion = random.Next(1, GenerationSettings.maxHallwayExpansion);
                 hallways.Add(new(edge, expansion));
             }
 
@@ -159,16 +160,12 @@ namespace Assets.Scripts.Generation
             // Add lights
             lights = new();
             foreach (Room room in rooms)
-            {
-                //lights.Add(new(room.GetCenter(), 8, new(212, 169, 106)));
-                //lights.Add(new(new(room.GetCenter().x + 3, room.GetCenter().y + 5), 8, new(0, 255, 255)));
-                lights.Add(new AreaLight(new(room.Center.x, 1.5f, room.Center.y), 1, new(212, 169, 106), 1, 1, 180));
-            }
+                lights.Add(new Light(new(room.Center.x, 0.5f, room.Center.y), 40));
 
             // Add walls
-            FillArea(0, 0, Settings.gridWidth - 1, Settings.gridHeight - 1, TileType.Wall, ShouldPlaceWall);
+            FillArea(0, 0, GenerationSettings.gridWidth - 1, GenerationSettings.gridHeight - 1, TileType.Wall, ShouldPlaceWall);
 
-            Dungeon dungeon = new(grid, selectedEdges, Settings, random, rooms, lights);
+            Dungeon dungeon = new(grid, selectedEdges, GenerationSettings, random, rooms, lights);
 
 #if UNITY_EDITOR
             if (DungeonDebug.instance != null)
@@ -185,17 +182,17 @@ namespace Assets.Scripts.Generation
             newRoom = null;
 
             // Create new rooms until one is valid
-            while (newRoom == null && attempts < Settings.maxRoomAttempts)
+            while (newRoom == null && attempts < GenerationSettings.maxRoomAttempts)
             {
                 newRoom = new Room(
-                    random.Next(1, Settings.gridWidth - Settings.maxRoomWidth - 1),
-                    random.Next(1, Settings.gridHeight - Settings.maxRoomHeight - 1),
-                    random.Next(Settings.minRoomWidth, Settings.maxRoomWidth + 1),
-                    random.Next(Settings.minRoomHeight, Settings.maxRoomHeight + 1)
+                    random.Next(1, GenerationSettings.gridWidth - GenerationSettings.maxRoomWidth - 1),
+                    random.Next(1, GenerationSettings.gridHeight - GenerationSettings.maxRoomHeight - 1),
+                    random.Next(GenerationSettings.minRoomWidth, GenerationSettings.maxRoomWidth + 1),
+                    random.Next(GenerationSettings.minRoomHeight, GenerationSettings.maxRoomHeight + 1)
                     );
 
                 // Check if room is within grid
-                if (!newRoom.WithinGrid(Settings.gridWidth, Settings.gridHeight))
+                if (!newRoom.WithinGrid(GenerationSettings.gridWidth, GenerationSettings.gridHeight))
                 {
                     attempts++;
                     newRoom = null;
@@ -453,7 +450,7 @@ namespace Assets.Scripts.Generation
 
         private bool WithinGrid(int x, int y)
         {
-            return (x >= 0 && y >= 0 && x < Settings.gridWidth && y < Settings.gridHeight);
+            return (x >= 0 && y >= 0 && x < GenerationSettings.gridWidth && y < GenerationSettings.gridHeight);
         }
 
         public bool TryGetRandomRoomCenter(out Vertex center)

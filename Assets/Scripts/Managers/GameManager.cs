@@ -6,7 +6,8 @@ using static Assets.Scripts.Generation.DungeonGeneration;
 [RequireComponent(typeof(DungeonRenderer))]
 public class GameManager : MonoBehaviour
 {
-    public GenerationSettings dungeonSettings;
+    public GenerationSettings generationSettings;
+    public RenderingSettings renderingSettings;
 
     private bool isPaused = false;
 
@@ -44,11 +45,11 @@ public class GameManager : MonoBehaviour
         Cursor.visible = false;
 
         // Generate dungeon
-        dungeonGenerator = new DungeonGenerator(dungeonSettings);
+        dungeonGenerator = new DungeonGenerator(generationSettings);
         dungeon = dungeonGenerator.Generate();
 
         // Render dungeon
-        playerSpawnPosition = dungeonRenderer.RenderDungeon(dungeon);
+        playerSpawnPosition = dungeonRenderer.RenderDungeon(dungeon, renderingSettings);
 
         // Spawn Player and register torch with light manager
         player = Instantiate(playerPrefab, playerSpawnPosition, Quaternion.identity, null).transform;
