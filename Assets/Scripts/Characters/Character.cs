@@ -3,7 +3,7 @@ using UnityEngine;
 namespace Assets.Scripts.AI
 {
     [RequireComponent(typeof(AIController))]
-    public abstract class Character : MonoBehaviour, IDamagable, IHealable
+    public class Character : MonoBehaviour, IDamagable, IHealable
     {
         public float MaxHealth { get; set; }
         public bool IsDead { get; private set; }

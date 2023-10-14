@@ -153,16 +153,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   allowedTypes:
-  - Guard
+  - Character
   preconditions: []
   postconditions:
-  - name: hasAmmo
+  - condition: 0
+    specification: 0
     value: 1
   terminationType: 0
   animationName: grabGroundItem
   animationDuration: 1
   terminationCondition:
-    name: 
+    condition: 0
+    specification: 0
     value: 0
 --- !u!4 &74884398
 Transform:
@@ -191,11 +193,11 @@ GameObject:
   - component: {fileID: 384370830}
   - component: {fileID: 384370829}
   - component: {fileID: 384370833}
+  - component: {fileID: 384370839}
+  - component: {fileID: 384370834}
   - component: {fileID: 384370832}
   - component: {fileID: 384370836}
   - component: {fileID: 384370835}
-  - component: {fileID: 384370834}
-  - component: {fileID: 384370837}
   - component: {fileID: 384370838}
   m_Layer: 0
   m_Name: Guard
@@ -344,18 +346,6 @@ MonoBehaviour:
   lookSensitivity: 5
   lookAngleMax: 85
   lookAngleMin: -70
---- !u!114 &384370837
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 384370827}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 97d1c2441a8e0fa4b905b46c4f739a1d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!95 &384370838
 Animator:
   serializedVersion: 5
@@ -376,6 +366,18 @@ Animator:
   m_HasTransformHierarchy: 1
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
+--- !u!114 &384370839
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 384370827}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2cad59d0979486149ac2e105a33cf03a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &751227658
 GameObject:
   m_ObjectHideFlags: 0

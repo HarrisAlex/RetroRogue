@@ -12,5 +12,5 @@ public interface ISmartObject
     public TerminationType GetAnimationTerminationType();
     public string GetAnimationName();
     public float GetAnimationDuration();
-    public Condition GetAnimationCondition();
+    public ConditionValuePair GetAnimationCondition();
 }

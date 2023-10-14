@@ -179,7 +179,7 @@ namespace Assets.Scripts.AI
         private TerminationType terminationType;
 
         private float duration;
-        private Condition condition;
+        private ConditionValuePair condition;
 
         private float timer;
 
@@ -197,7 +197,7 @@ namespace Assets.Scripts.AI
             timer = 0;
         }
 
-        public AUseObject(WorldState preconditions, WorldState postconditions, string animation, Condition condition)
+        public AUseObject(WorldState preconditions, WorldState postconditions, string animation, ConditionValuePair condition)
         {
             cost = 2;
 
@@ -237,10 +237,10 @@ namespace Assets.Scripts.AI
     {
         public AInvestigate()
         {
-            preconditions.SetCondition(Conditions.AWARE_OF_SOUND, true);
-            preconditions.SetCondition(Conditions.AWARE_OF_PLAYER, false);
+            preconditions.SetCondition(Condition.AwareOfSound, -1, true);
+            preconditions.SetCondition(Condition.AwareOfPlayer, -1, false);
 
-            postconditions.SetCondition(Conditions.AWARE_OF_SOUND, false);
+            postconditions.SetCondition(Condition.AwareOfSound, -1, false);
         }
 
         public override void Run(ActionInput input, System.Action OnFinish)
@@ -254,10 +254,10 @@ namespace Assets.Scripts.AI
         public ASearch()
         {
             cost = 2;
-            preconditions.SetCondition(Conditions.AWARE_OF_PLAYER, true);
-            preconditions.SetCondition(Conditions.CAN_SEE_PLAYER, false);
+            preconditions.SetCondition(Condition.AwareOfPlayer, -1, true);
+            preconditions.SetCondition(Condition.CanSeePlayer, -1, false);
 
-            postconditions.SetCondition(Conditions.CAN_SEE_PLAYER, true);
+            postconditions.SetCondition(Condition.CanSeePlayer, -1, true);
         }
 
         public override void Run(ActionInput input, System.Action OnFinish)
@@ -270,11 +270,11 @@ namespace Assets.Scripts.AI
     {
         public ARangedAttack()
         {
-            preconditions.SetCondition(Conditions.CAN_SEE_PLAYER, true);
-            preconditions.SetCondition(Conditions.HAS_RANGED, true);
-            preconditions.SetCondition(Conditions.HAS_AMMO, true);
+            preconditions.SetCondition(Condition.CanSeePlayer, -1, true);
+            preconditions.SetCondition(Condition.HasRanged, -1, true);
+            preconditions.SetCondition(Condition.HasAmmo, -1, true);
 
-            postconditions.SetCondition(Conditions.PLAYER_DEAD, true);
+            postconditions.SetCondition(Condition.PlayerDead, -1, true);
         }
 
         public override void Run(ActionInput input, System.Action OnFinish)
@@ -288,11 +288,11 @@ namespace Assets.Scripts.AI
         public AMeleeAttack()
         {
             cost = 2;
-            preconditions.SetCondition(Conditions.CAN_SEE_PLAYER, true);
-            preconditions.SetCondition(Conditions.NEAR_PLAYER, true);
-            preconditions.SetCondition(Conditions.HAS_MELEE, true);
+            preconditions.SetCondition(Condition.CanSeePlayer, -1, true);
+            preconditions.SetCondition(Condition.NearPlayer, -1, true);
+            preconditions.SetCondition(Condition.HasMelee, -1, true);
 
-            postconditions.SetCondition(Conditions.PLAYER_DEAD, true);
+            postconditions.SetCondition(Condition.PlayerDead, -1, true);
         }
 
         public override void Run(ActionInput input, System.Action OnFinish)
@@ -306,10 +306,10 @@ namespace Assets.Scripts.AI
         public AChase()
         {
             cost = 2;
-            preconditions.SetCondition(Conditions.CAN_SEE_PLAYER, true);
-            preconditions.SetCondition(Conditions.NEAR_PLAYER, false);
+            preconditions.SetCondition(Condition.CanSeePlayer, -1, true);
+            preconditions.SetCondition(Condition.NearPlayer, -1, false);
 
-            postconditions.SetCondition(Conditions.NEAR_PLAYER, true);
+            postconditions.SetCondition(Condition.NearPlayer, -1, true);
         }
 
         public override void Run(ActionInput input, System.Action OnFinish)
@@ -323,10 +323,10 @@ namespace Assets.Scripts.AI
         public ARecover()
         {
             cost = 2;
-            preconditions.SetCondition(Conditions.LOW_HEALTH, true);
-            preconditions.SetCondition(Conditions.NEAR_HEALTH, true);
+            preconditions.SetCondition(Condition.LowHealth, -1, true);
+            preconditions.SetCondition(Condition.NearHealth, -1, true);
 
-            postconditions.SetCondition(Conditions.LOW_HEALTH, false);
+            postconditions.SetCondition(Condition.LowHealth, -1, false);
         }
 
         public override void Run(ActionInput input, System.Action OnFinish)

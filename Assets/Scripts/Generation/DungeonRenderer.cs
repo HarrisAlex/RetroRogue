@@ -19,12 +19,9 @@ namespace Assets.Scripts.Generation
 
         private List<LightData> lights;
 
-        private static Random random;
-
         public Vector3 RenderDungeon(Dungeon dungeon, RenderingSettings renderingSettings)
         {
             this.renderingSettings = renderingSettings;
-            random = new();
 
             if (root != null)
             {

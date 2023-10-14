@@ -4,9 +4,9 @@ namespace Assets.Scripts.AI
 {
     public struct WorldState
     {
-        public List<Condition> Conditions { get; private set; }
+        public List<ConditionValuePair> Conditions { get; private set; }
 
-        public WorldState(List<Condition> conditions)
+        public WorldState(List<ConditionValuePair> conditions)
         {
             Conditions = conditions;
         }
@@ -15,45 +15,45 @@ namespace Assets.Scripts.AI
         {
             WorldState result = new(new());
 
-            foreach (Condition condition in current.Conditions)
-                result.SetCondition(condition.name, condition.value);
+            foreach (ConditionValuePair condition in current.Conditions)
+                result.SetCondition(condition.condition, condition.specification, condition.value);
 
-            foreach (Condition condition in addition.Conditions)
-                result.SetCondition(condition.name, condition.value);
+            foreach (ConditionValuePair condition in addition.Conditions)
+                result.SetCondition(condition.condition, condition.specification, condition.value);
 
             return result;
         }
 
-        public bool ContainsCondition(Condition condition)
+        public bool ContainsCondition(Condition condition, int specification)
         {
-            foreach (Condition tmpCond in Conditions)
+            foreach (ConditionValuePair tmpCond in Conditions)
             {
-                if (condition == tmpCond)
+                if (condition == tmpCond.condition && specification == tmpCond.specification)
                     return true;
             }
 
             return false;
         }
 
-        public bool GetCondition(Condition condition)
+        public bool GetCondition(Condition condition, int specification)
         {
-            foreach (Condition tmpCond in Conditions)
+            foreach (ConditionValuePair tmpCond in Conditions)
             {
-                if (condition == tmpCond)
+                if (condition == tmpCond.condition && specification == tmpCond.specification)
                     return tmpCond.value;
             }
 
             return false;
         }
 
-        public void SetCondition(string condition, bool value)
+        public void SetCondition(Condition condition, int specification, bool value)
         {
-            Condition tmpCond = new(condition, value);
-            if (ContainsCondition(tmpCond))
+            ConditionValuePair tmpCond = new(condition, specification, value);
+            if (ContainsCondition(condition, specification))
             {
                 for (int i = 0; i < Conditions.Count; i++)
                 {
-                    if (Conditions[i].name == condition)
+                    if (Conditions[i].condition == condition && Conditions[i].specification == specification)
                     {
                         Conditions[i] = tmpCond;
                         return;
@@ -66,28 +66,28 @@ namespace Assets.Scripts.AI
 
         public bool MatchesState(WorldState state)
         {
-            foreach (Condition condition in state.Conditions)
+            foreach (ConditionValuePair condition in state.Conditions)
             {
-                if (!ContainsCondition(condition)) return false;
+                if (!ContainsCondition(condition.condition, condition.specification)) return false;
 
-                if (GetCondition(condition) != state.GetCondition(condition)) return false;
+                if (GetCondition(condition.condition, condition.specification) != state.GetCondition(condition.condition, condition.specification)) return false;
             }
 
             return true;
         }
 
-        public bool MatchesState(Condition condition)
+        public bool MatchesState(ConditionValuePair condition)
         {
-            if (!ContainsCondition(condition)) return false;
+            if (!ContainsCondition(condition.condition, condition.specification)) return false;
 
-            if (GetCondition(condition) != condition.value) return false;
+            if (GetCondition(condition.condition, condition.specification) != condition.value) return false;
 
             return true;
         }
 
         public override bool Equals(object o)
         {
-            if (o.GetType() != typeof(WorldState))
+            if (o is WorldState)
                 return false;
 
             return this == (WorldState)o;
@@ -98,16 +98,16 @@ namespace Assets.Scripts.AI
             return base.GetHashCode();
         }
 
-        public static bool operator ==(WorldState a, WorldState b)
+        public static bool operator ==(WorldState left, WorldState right)
         {
-            if (a.Conditions == null || b.Conditions == null)
+            if (left.Conditions == null || right.Conditions == null)
                 return false;
 
-            foreach (Condition condition in a.Conditions)
+            foreach (ConditionValuePair condition in left.Conditions)
             {
-                if (b.ContainsCondition(condition))
+                if (right.ContainsCondition(condition.condition, condition.specification))
                 {
-                    if (a.GetCondition(condition) != b.GetCondition(condition))
+                    if (left.GetCondition(condition.condition, condition.specification) != right.GetCondition(condition.condition, condition.specification))
                         return false;
                 }
                 else
@@ -119,51 +119,40 @@ namespace Assets.Scripts.AI
 
         public static bool operator !=(WorldState a, WorldState b)
         {
-            if (a.Conditions == null || b.Conditions == null)
-                return true;
-
-            foreach (Condition condition in a.Conditions)
-            {
-                if (b.ContainsCondition(condition))
-                {
-                    if (a.GetCondition(condition) != b.GetCondition(condition))
-                        return true;
-                }
-            }
-
-            return false;
+            return !(a == b);
         }
     }
 
     [System.Serializable]
-    public struct Condition
+    public struct ConditionValuePair
     {
-        public string name;
-
+        public Condition condition;
+        public int specification;
         public bool value;
 
-        public Condition(string name, bool value)
+        public ConditionValuePair(Condition condition, int specification, bool value)
         {
-            this.name = name;
+            this.condition = condition;
+            this.specification = specification;
             this.value = value;
         }
 
-        public static bool operator ==(Condition a, Condition b)
+        public static bool operator ==(ConditionValuePair a, ConditionValuePair b)
         {
-            return a.name == b.name;
+            return (a.condition == b.condition) && (a.specification == b.specification);
         }
 
-        public static bool operator !=(Condition a, Condition b)
+        public static bool operator !=(ConditionValuePair a, ConditionValuePair b)
         {
-            return a.name != b.name;
+            return (a.condition != b.condition) || (a.specification != b.specification);
         }
 
         public override bool Equals(object o)
         {
-            if (o.GetType() != typeof(Condition))
+            if (o is ConditionValuePair)
                 return false;
 
-            return this == (Condition)o;
+            return this == (ConditionValuePair)o;
         }
 
         public override int GetHashCode()
@@ -172,24 +161,27 @@ namespace Assets.Scripts.AI
         }
     }
 
-    public class Conditions
+    public enum Condition
     {
-        public const string HAS_AMMO = "hasAmmo";
-        public const string HAS_RANGED = "hasRanged";
-        public const string HAS_MELEE = "hasMelee";
-        public const string NEAR_PLAYER = "nearPlayer";
-        public const string PLAYER_DEAD = "playerDead";
-        public const string TIRED = "tired";
-        public const string NEAR_ALLY = "nearAlly";
-        public const string BORED = "bored";
-        public const string HUNGRY = "hungry";
-        public const string NEAR_BED = "nearBed";
-        public const string LOW_HEALTH = "lowHealth";
-        public const string NEAR_HEALTH = "nearHealth";
+        HasAmmo,
+        HasRanged,
+        HasMelee,
+        
+        NearPlayer,
+        PlayerDead,
+        NearAlly,
+        NearBed,
+        NearHealth,
+        NearObject,
 
-        public const string AWARE_OF_PLAYER = "awareOfPlayer";
-        public const string AWARE_OF_SOUND = "awareOfSound";
+        Tired,
+        Bored,
+        Hungry,
 
-        public const string CAN_SEE_PLAYER = "canSeePlayer";
+        LowHealth,
+        
+        AwareOfPlayer,
+        AwareOfSound,
+        CanSeePlayer
     }
 }

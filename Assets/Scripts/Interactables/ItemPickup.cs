@@ -7,14 +7,14 @@ public class ItemPickup : MonoBehaviour, IInteractable, ISmartObject
 {
     public bool CurrentlyInteractable { get; set; }
     [SerializeField] private List<string> allowedTypes;
-    [SerializeField] private List<Condition> preconditions;
-    [SerializeField] private List<Condition> postconditions;
+    [SerializeField] private List<ConditionValuePair> preconditions;
+    [SerializeField] private List<ConditionValuePair> postconditions;
 
     [Header("Animation settings")]
     [SerializeField] private TerminationType terminationType;
     [SerializeField] private string animationName;
     [SerializeField] private float animationDuration;
-    [SerializeField] private Condition terminationCondition;
+    [SerializeField] private ConditionValuePair terminationCondition;
 
     public WorldState GetPostconditions()
     {
@@ -67,7 +67,7 @@ public class ItemPickup : MonoBehaviour, IInteractable, ISmartObject
         return animationDuration;
     }
 
-    public Condition GetAnimationCondition()
+    public ConditionValuePair GetAnimationCondition()
     {
         return terminationCondition;
     }
