@@ -1,7 +1,6 @@
-using System;
+using UnityEngine;
 using System.Collections.Generic;
 using static Assets.Scripts.Generation.DungeonGeneration;
-using static Assets.Scripts.Generation.Dungeon3D;
 using Random = System.Random;
 
 namespace Assets.Scripts.Generation
@@ -24,7 +23,7 @@ namespace Assets.Scripts.Generation
         private List<Room> rooms;
         private List<Edge> edges;
         private HashSet<Edge> selectedEdges;
-        private List<Light> lights;
+        private List<LightData> lights;
 
         public DungeonGenerator(GenerationSettings generationSettings)
         {
@@ -37,7 +36,7 @@ namespace Assets.Scripts.Generation
 
             if (seed == 0)
             {
-                TimeSpan time = (DateTime.UtcNow - new DateTime(2003, 8, 8));
+                System.TimeSpan time = (System.DateTime.UtcNow - new System.DateTime(2003, 8, 8));
                 seed = (int)time.TotalSeconds;
 
                 seed = 631086620;
@@ -164,13 +163,13 @@ namespace Assets.Scripts.Generation
             {
                 tmpColor = new(random.Next(0, 255), random.Next(0, 255), random.Next(0, 255));
 
-                lights.Add(new Light(new(room.Center.x, 0.5f, room.Center.y), 5, tmpColor, 0));
+                lights.Add(new LightData(new(room.Center.x, 1.5f, room.Center.y), 5, tmpColor, 5));
             }
 
             // Add walls
             FillArea(0, 0, GenerationSettings.gridWidth - 1, GenerationSettings.gridHeight - 1, TileType.Wall, ShouldPlaceWall);
 
-            Dungeon dungeon = new(grid, selectedEdges, GenerationSettings, random, rooms, lights);
+            Dungeon dungeon = new(grid, selectedEdges, GenerationSettings, rooms, lights);
 
 #if UNITY_EDITOR
             if (DungeonDebug.instance != null)
@@ -257,7 +256,7 @@ namespace Assets.Scripts.Generation
 
             float deltaX = maxX - minX;
             float deltaY = maxY - minY;
-            float deltaMax = MathF.Max(deltaX, deltaY) * 2;
+            float deltaMax = Mathf.Max(deltaX, deltaY) * 2;
 
             // Create supra-triangle
             Vertex v1 = new(minX - 1, minY - 1);
@@ -376,7 +375,7 @@ namespace Assets.Scripts.Generation
         /// <param name="y2">Top-rightcorner of area.</param>
         /// <param name="tileType">The TileType of which to set tiles in the area.</param>
         /// <param name="conditional">The function by which to determine whether a tile should be set.</param>
-        private void FillArea(int x1, int y1, int x2, int y2, TileType tileType, Func<int, int, bool> conditional)
+        private void FillArea(int x1, int y1, int x2, int y2, TileType tileType, System.Func<int, int, bool> conditional)
         {
             if (!WithinGrid(x1, y1) || !WithinGrid(x2, y2)) return;
 

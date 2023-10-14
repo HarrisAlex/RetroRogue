@@ -1,6 +1,5 @@
 ﻿using UnityEngine;
 using static Assets.Scripts.Generation.DungeonGeneration;
-using static Assets.Scripts.Generation.Dungeon3D;
 using System.Collections.Generic;
 using Random = System.Random;
 
@@ -18,7 +17,7 @@ namespace Assets.Scripts.Generation
         private Transform wallRoot;
         private readonly float diagonalScale = Mathf.Sqrt(2);
 
-        private List<DungeonGeneration.Light> lights;
+        private List<LightData> lights;
 
         private static Random random;
 
@@ -172,18 +171,18 @@ namespace Assets.Scripts.Generation
                 {
                     description.vertices[i] = new Vector3(Mathf.Lerp(0, width, (float)x / vertexIterations) + position.x, position.y, Mathf.Lerp(0, height, (float)y / vertexIterations) + position.z);
                     description.vertices[i] = rotation * (description.vertices[i] - position) + position;
-                    description.normals[i] = (rotation * Vector3.up).normalized;
+                    description.normals[i] = -(rotation * Vector3.up).normalized;
                     description.uvs[i] = new Vector2(x * (width / vertexIterations), y * (height / vertexIterations));
 
                     currentColor = renderingSettings.ambientColor;
                     Color tmpColor = new();
-                    foreach (DungeonGeneration.Light light in lights)
+                    foreach (LightData light in lights)
                     {
-                        distance = (light.position.ToVector() - description.vertices[i]).sqrMagnitude;
+                        distance = (light.position - description.vertices[i]).sqrMagnitude;
 
-                        tmpColor.r = AverageColorChannel(light.color.r, distance, light.intensity, light.radius);
-                        tmpColor.g = AverageColorChannel(light.color.g, distance, light.intensity, light.radius);
-                        tmpColor.b = AverageColorChannel(light.color.b, distance, light.intensity, light.radius);
+                        tmpColor.r = AverageColorChannel(light.color.r, tmpColor.r, distance, light.intensity, light.radius);
+                        tmpColor.g = AverageColorChannel(light.color.g, tmpColor.g, distance, light.intensity, light.radius);
+                        tmpColor.b = AverageColorChannel(light.color.b, tmpColor.b, distance, light.intensity, light.radius);
 
                         currentColor += tmpColor;
                     }
@@ -208,9 +207,9 @@ namespace Assets.Scripts.Generation
             return GenerateMesh(description, material, root);
         }
 
-        private float AverageColorChannel(float newColor, float distance, float intensity, float radius)
+        private float AverageColorChannel(float newColor, float oldColor, float distance, float intensity, float radius)
         {
-            return (intensity * (newColor / 255) * Mathf.Pow(radius, 2)) / distance;
+            return (intensity * (newColor / 255)) / distance;
         }
 
         private Transform GenerateMesh(MeshDescription description, Material material, Transform root)

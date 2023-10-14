@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using static Assets.Scripts.Generation.DungeonGeneration;
 
 public class Node<T>

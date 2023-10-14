@@ -1,6 +1,5 @@
-﻿using System;
+﻿using UnityEngine;
 using System.Collections.Generic;
-using static Assets.Scripts.Generation.Dungeon3D;
 
 namespace Assets.Scripts.Generation
 {
@@ -94,7 +93,7 @@ namespace Assets.Scripts.Generation
                 return new Vertex(x, y);
             }
 
-            [Flags]
+            [System.Flags]
             public enum Neighbor
             {
                 Up = 1,
@@ -150,7 +149,7 @@ namespace Assets.Scripts.Generation
             {
                 get
                 {
-                    float divisor = MathF.Sqrt((v.x - u.x) + (v.y - u.y));
+                    float divisor = Mathf.Sqrt((v.x - u.x) + (v.y - u.y));
                     return new Edge(u, u + (v / divisor));
                 }
             }
@@ -195,7 +194,7 @@ namespace Assets.Scripts.Generation
             {
                 get
                 {
-                    return MathF.Abs((a.x * (b.y - c.y)) + (b.x * (c.y - a.y)) + (c.x * (a.y - b.y))) * 0.5f;
+                    return Mathf.Abs((a.x * (b.y - c.y)) + (b.x * (c.y - a.y)) + (c.x * (a.y - b.y))) * 0.5f;
                 }
             }
 
@@ -265,12 +264,12 @@ namespace Assets.Scripts.Generation
 
             public Hallway(Edge edge, float expansion)
             {
-                float edgeAngle = MathF.Asin(MathF.Abs(edge.u.x - edge.v.x) / edge.Length);
+                float edgeAngle = Mathf.Asin(Mathf.Abs(edge.u.x - edge.v.x) / edge.Length);
 
-                float triangleAngle = ((MathF.PI / 180) * 90) - edgeAngle;
+                float triangleAngle = ((Mathf.PI / 180) * 90) - edgeAngle;
 
-                float dx = MathF.Sin(triangleAngle) * expansion;
-                float dy = MathF.Cos(triangleAngle) * expansion;
+                float dx = Mathf.Sin(triangleAngle) * expansion;
+                float dy = Mathf.Cos(triangleAngle) * expansion;
 
                 if (edge.u.x > edge.v.x)
                     dx *= -1;
@@ -382,16 +381,16 @@ namespace Assets.Scripts.Generation
             }
         }
 
-        public class Light
+        public class LightData
         {
-            public Vertex3D position;
+            public Vector3 position;
             public float intensity;
-            public UnityEngine.Color color;
+            public Color color;
             public float radius;
 
-            public Light() { }
+            public LightData() { }
 
-            public Light(Vertex3D position, float intensity, UnityEngine.Color color, float radius)
+            public LightData(Vector3 position, float intensity, UnityEngine.Color color, float radius)
             {
                 this.position = position;
                 this.intensity = intensity;
@@ -409,9 +408,9 @@ namespace Assets.Scripts.Generation
             public readonly GenerationSettings settings;
             public readonly HashSet<Edge> edges;
             public readonly List<Room> rooms;
-            public readonly List<Light> lights;
+            public readonly List<LightData> lights;
 
-            public Dungeon(TileType[,] grid, HashSet<Edge> edges, GenerationSettings settings, Random random, List<Room> rooms, List<Light> lights)
+            public Dungeon(TileType[,] grid, HashSet<Edge> edges, GenerationSettings settings, List<Room> rooms, List<LightData> lights)
             {
                 this.grid = grid;
                 this.edges = edges;
@@ -427,7 +426,7 @@ namespace Assets.Scripts.Generation
                         vertices.Add(edge.v);
                 }
 
-                spawn = vertices[random.Next(0, vertices.Count - 1)];
+                spawn = vertices[Random.Range(0, vertices.Count - 1)];
 
                 // Create nodes for floor tiles
                 List<Node<Vertex>> nodes = new();
@@ -476,18 +475,18 @@ namespace Assets.Scripts.Generation
 
         public static float Distance(Coordinate c1, Coordinate c2)
         {
-            return MathF.Sqrt(MathF.Pow(c1.x - c2.x, 2) + MathF.Pow(c1.y - c2.y, 2));
+            return Mathf.Sqrt(Mathf.Pow(c1.x - c2.x, 2) + Mathf.Pow(c1.y - c2.y, 2));
         }
 
         public static float Distance(Vertex v1, Vertex v2)
         {
-            return MathF.Sqrt(MathF.Pow(v1.x - v2.x, 2) + MathF.Pow(v1.y - v2.y, 2));
+            return Mathf.Sqrt(Mathf.Pow(v1.x - v2.x, 2) + Mathf.Pow(v1.y - v2.y, 2));
         }
 
         public static float Distance(object a, object b)
         {
-            Type aType = a.GetType();
-            Type bType = b.GetType();
+            System.Type aType = a.GetType();
+            System.Type bType = b.GetType();
 
             if (aType == typeof(Vertex) && bType == typeof(Vertex))
             {
@@ -516,12 +515,12 @@ namespace Assets.Scripts.Generation
 
         public static float SquareDistance(Vertex v1, Vertex v2)
         {
-            return MathF.Pow(v1.x - v2.x, 2) + MathF.Pow(v1.y - v2.y, 2);
+            return Mathf.Pow(v1.x - v2.x, 2) + Mathf.Pow(v1.y - v2.y, 2);
         }
 
         public static bool Approximately(float a, float b)
         {
-            return MathF.Abs(a - b) <= float.Epsilon * MathF.Abs(a + b) * 2 || MathF.Abs(a - b) < float.MinValue;
+            return Mathf.Abs(a - b) <= float.Epsilon * Mathf.Abs(a + b) * 2 || Mathf.Abs(a - b) < float.MinValue;
         }
 
         public static bool Approximately(Vertex a, Vertex b)
@@ -529,12 +528,12 @@ namespace Assets.Scripts.Generation
             return Approximately(a.x, b.x) && Approximately(a.y, b.y);
         }
 
-        public static bool Approximately(Vertex3D a, Vertex3D b)
+        public static bool Approximately(Vector3 a, Vector3 b)
         {
             return Approximately(a.x, b.x) && Approximately(a.y, b.y) && Approximately(a.z, b.z);
         }
 
-        public static void IterateArea(int x1, int y1, int x2, int y2, Action<int, int> function)
+        public static void IterateArea(int x1, int y1, int x2, int y2, System.Action<int, int> function)
         {
             for (int x = x1; x <= x2; x++)
             {
