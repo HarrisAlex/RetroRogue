@@ -176,10 +176,16 @@ namespace Assets.Scripts.Generation
                     description.uvs[i] = new Vector2(x * (width / vertexIterations), y * (height / vertexIterations));
 
                     currentColor = renderingSettings.ambientColor;
+                    Color tmpColor = new();
                     foreach (DungeonGeneration.Light light in lights)
                     {
                         distance = (light.position.ToVector() - description.vertices[i]).sqrMagnitude;
-                        currentColor = CalculateLight(currentColor, renderingSettings.defaultLightColor, distance, light.intensity);
+
+                        tmpColor.r = AverageColorChannel(light.color.r, distance, light.intensity, light.radius);
+                        tmpColor.g = AverageColorChannel(light.color.g, distance, light.intensity, light.radius);
+                        tmpColor.b = AverageColorChannel(light.color.b, distance, light.intensity, light.radius);
+
+                        currentColor += tmpColor;
                     }
 
                     description.colors[i] = currentColor;
@@ -202,53 +208,9 @@ namespace Assets.Scripts.Generation
             return GenerateMesh(description, material, root);
         }
 
-        private float AverageColorChannel(float currentColor, float newColor, float distance, float intensity)
+        private float AverageColorChannel(float newColor, float distance, float intensity, float radius)
         {
-            return Mathf.Sqrt((Mathf.Pow(currentColor, 2) + Mathf.Pow((1 / distance) * intensity, 2) / 2) * (newColor / 255));
-        }
-
-        private float AverageColorChannel(float currentColor, float newColor, float distance, float intensity, float cosine, float surfaceAreaFactor)
-        {
-            return Mathf.Sqrt(Mathf.Pow(currentColor, 2) + Mathf.Pow(intensity * cosine * surfaceAreaFactor * (1 / distance), 2) * newColor / 255);
-        }
-
-        private Color AverageColor(Color a, Color b)
-        {
-            Color average = new();
-
-            average.r = Mathf.Sqrt(Mathf.Pow(a.r, 2) + Mathf.Pow(b.r, 2));
-            average.g = Mathf.Sqrt(Mathf.Pow(a.g, 2) + Mathf.Pow(b.g, 2));
-            average.b = Mathf.Sqrt(Mathf.Pow(a.b, 2) + Mathf.Pow(b.b, 2));
-
-            return average;
-        }
-
-        private Color CalculateLight(Color currentColor, Color lightColor, float distance, float intensity)
-        {
-            Color color = new();
-
-            color.r = AverageColorChannel(currentColor.r, lightColor.r, distance, intensity);
-            color.r = Mathf.Max(color.r, currentColor.r);
-            color.g = AverageColorChannel(currentColor.g, lightColor.g, distance, intensity);
-            color.g = Mathf.Max(color.g, currentColor.g);
-            color.b = AverageColorChannel(currentColor.b, lightColor.b, distance, intensity);
-            color.b = Mathf.Max(color.b, currentColor.b);
-
-            return color;
-        }
-
-        private Color CalculateLight(in Color currentColor, in Color lightColor, float distance, float intensity, float cosine, float surfaceAreaFactor)
-        {
-            Color color = new();
-
-            color.r = AverageColorChannel(currentColor.r, lightColor.r, distance, intensity, cosine, surfaceAreaFactor);
-            color.r = Mathf.Max(color.r, currentColor.r);
-            color.g = AverageColorChannel(currentColor.g, lightColor.g, distance, intensity, cosine, surfaceAreaFactor);
-            color.g = Mathf.Max(color.g, currentColor.g);
-            color.b = AverageColorChannel(currentColor.b, lightColor.b, distance, intensity, cosine, surfaceAreaFactor);
-            color.b = Mathf.Max(color.b, currentColor.b);
-
-            return color;
+            return (intensity * (newColor / 255) * Mathf.Pow(radius, 2)) / distance;
         }
 
         private Transform GenerateMesh(MeshDescription description, Material material, Transform root)

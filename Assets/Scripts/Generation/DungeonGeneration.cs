@@ -386,13 +386,17 @@ namespace Assets.Scripts.Generation
         {
             public Vertex3D position;
             public float intensity;
+            public UnityEngine.Color color;
+            public float radius;
 
             public Light() { }
 
-            public Light(Vertex3D position, float intensity)
+            public Light(Vertex3D position, float intensity, UnityEngine.Color color, float radius)
             {
                 this.position = position;
                 this.intensity = intensity;
+                this.color = color;
+                this.radius = radius;
             }
         }
 

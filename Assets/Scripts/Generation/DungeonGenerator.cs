@@ -159,8 +159,13 @@ namespace Assets.Scripts.Generation
 
             // Add lights
             lights = new();
+            UnityEngine.Color tmpColor;
             foreach (Room room in rooms)
-                lights.Add(new Light(new(room.Center.x, 0.5f, room.Center.y), 40));
+            {
+                tmpColor = new(random.Next(0, 255), random.Next(0, 255), random.Next(0, 255));
+
+                lights.Add(new Light(new(room.Center.x, 0.5f, room.Center.y), 5, tmpColor, 0));
+            }
 
             // Add walls
             FillArea(0, 0, GenerationSettings.gridWidth - 1, GenerationSettings.gridHeight - 1, TileType.Wall, ShouldPlaceWall);
