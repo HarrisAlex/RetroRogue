@@ -16,44 +16,44 @@ namespace Assets.Scripts.AI
             WorldState result = new(new());
 
             foreach (ConditionValuePair condition in current.Conditions)
-                result.SetCondition(condition.condition, condition.specification, condition.value);
+                result.SetCondition(condition.condition, condition.value);
 
             foreach (ConditionValuePair condition in addition.Conditions)
-                result.SetCondition(condition.condition, condition.specification, condition.value);
+                result.SetCondition(condition.condition, condition.value);
 
             return result;
         }
 
-        public bool ContainsCondition(Condition condition, int specification)
+        public bool ContainsCondition(ConditionValuePair condition)
         {
             foreach (ConditionValuePair tmpCond in Conditions)
             {
-                if (condition == tmpCond.condition && specification == tmpCond.specification)
+                if (condition == tmpCond)
                     return true;
             }
 
             return false;
         }
 
-        public bool GetCondition(Condition condition, int specification)
+        public bool GetCondition(ConditionValuePair condition)
         {
             foreach (ConditionValuePair tmpCond in Conditions)
             {
-                if (condition == tmpCond.condition && specification == tmpCond.specification)
+                if (condition == tmpCond)
                     return tmpCond.value;
             }
 
             return false;
         }
 
-        public void SetCondition(Condition condition, int specification, bool value)
+        public void SetCondition(string condition, bool value)
         {
-            ConditionValuePair tmpCond = new(condition, specification, value);
-            if (ContainsCondition(condition, specification))
+            ConditionValuePair tmpCond = new(condition, value);
+            if (ContainsCondition(tmpCond))
             {
                 for (int i = 0; i < Conditions.Count; i++)
                 {
-                    if (Conditions[i].condition == condition && Conditions[i].specification == specification)
+                    if (Conditions[i].condition == condition)
                     {
                         Conditions[i] = tmpCond;
                         return;
@@ -68,9 +68,9 @@ namespace Assets.Scripts.AI
         {
             foreach (ConditionValuePair condition in state.Conditions)
             {
-                if (!ContainsCondition(condition.condition, condition.specification)) return false;
+                if (!ContainsCondition(condition)) return false;
 
-                if (GetCondition(condition.condition, condition.specification) != state.GetCondition(condition.condition, condition.specification)) return false;
+                if (GetCondition(condition) != state.GetCondition(condition)) return false;
             }
 
             return true;
@@ -78,9 +78,9 @@ namespace Assets.Scripts.AI
 
         public bool MatchesState(ConditionValuePair condition)
         {
-            if (!ContainsCondition(condition.condition, condition.specification)) return false;
+            if (!ContainsCondition(condition)) return false;
 
-            if (GetCondition(condition.condition, condition.specification) != condition.value) return false;
+            if (GetCondition(condition) != condition.value) return false;
 
             return true;
         }
@@ -105,9 +105,9 @@ namespace Assets.Scripts.AI
 
             foreach (ConditionValuePair condition in left.Conditions)
             {
-                if (right.ContainsCondition(condition.condition, condition.specification))
+                if (right.ContainsCondition(condition))
                 {
-                    if (left.GetCondition(condition.condition, condition.specification) != right.GetCondition(condition.condition, condition.specification))
+                    if (left.GetCondition(condition) != right.GetCondition(condition))
                         return false;
                 }
                 else
@@ -126,25 +126,23 @@ namespace Assets.Scripts.AI
     [System.Serializable]
     public struct ConditionValuePair
     {
-        public Condition condition;
-        public int specification;
+        public string condition;
         public bool value;
 
-        public ConditionValuePair(Condition condition, int specification, bool value)
+        public ConditionValuePair(string condition, bool value)
         {
             this.condition = condition;
-            this.specification = specification;
             this.value = value;
         }
 
         public static bool operator ==(ConditionValuePair a, ConditionValuePair b)
         {
-            return (a.condition == b.condition) && (a.specification == b.specification);
+            return (a.condition == b.condition);
         }
 
         public static bool operator !=(ConditionValuePair a, ConditionValuePair b)
         {
-            return (a.condition != b.condition) || (a.specification != b.specification);
+            return (a.condition != b.condition);
         }
 
         public override bool Equals(object o)
@@ -161,27 +159,26 @@ namespace Assets.Scripts.AI
         }
     }
 
-    public enum Condition
+    public class Conditions
     {
-        HasAmmo,
-        HasRanged,
-        HasMelee,
-        
-        NearPlayer,
-        PlayerDead,
-        NearAlly,
-        NearBed,
-        NearHealth,
-        NearObject,
+        public const string HasAmmo = "hasAmmo";
+        public const string HasRanged = "hasRanged";
+        public const string HasMelee = "hasMelee";
+        public const string NearPlayer = "nearPlayer";
+        public const string PlayerDead = "playerDead";
+        public const string Tired = "tired";
+        public const string NearAlly = "nearAlly";
+        public const string Bored = "bored";
+        public const string Hungry = "hungry";
+        public const string NearBed = "nearBed";
+        public const string LowHealth = "lowHealth";
+        public const string NearHealth = "nearHealth";
 
-        Tired,
-        Bored,
-        Hungry,
+        public const string AwareOfPlayer = "awareOfPlayer";
+        public const string AwareOfSound = "awareOfSound";
 
-        LowHealth,
-        
-        AwareOfPlayer,
-        AwareOfSound,
-        CanSeePlayer
+        public const string CanSeePlayer = "canSeePlayer";
+
+        public const string NearObject = "nearObject";
     }
 }

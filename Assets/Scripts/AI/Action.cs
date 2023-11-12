@@ -13,53 +13,38 @@ namespace Assets.Scripts.AI
         public readonly LookController lookController;
         public readonly Animator animator;
         public readonly AIController aiController;
-        public readonly Pathfinding<Vertex> pathfinder;
 
-        public ActionInput(Transform playerTransform, MovementController movementController, LookController lookController, Animator animator, AIController aiController, Pathfinding<Vertex> pathfinder)
+        public ActionInput(Transform playerTransform, MovementController movementController, LookController lookController, Animator animator, AIController aiController)
         {
             this.playerTransform = playerTransform;
             this.movementController = movementController;
             this.lookController = lookController;
             this.animator = animator;
             this.aiController = aiController;
-            this.pathfinder = pathfinder;
         }
     }
 
     public abstract class Action
     {
-        public int cost;
-        public WorldState preconditions;
-        public WorldState postconditions;
+        public int Cost { get; protected set; }
+        public WorldState Preconditions { get; protected set; }
+        public WorldState Postconditions { get; protected set; }
 
         public Action()
         {
-            cost = 1;
-            preconditions = new(new());
-            postconditions = new(new());
+            Cost = 1;
+            Preconditions = new(new());
+            Postconditions = new(new());
         }
 
         public Action(int cost, WorldState preconditions, WorldState postconditions)
         {
-            this.cost = cost;
-            this.preconditions = preconditions;
-            this.postconditions = postconditions;
+            Cost = cost;
+            Preconditions = preconditions;
+            Postconditions = postconditions;
         }
 
-        public int GetCost()
-        {
-            return cost;
-        }
-
-        public WorldState GetPreconditions()
-        {
-            return preconditions;
-        }
-
-        public WorldState GetPostconditions()
-        {
-            return postconditions;
-        }
+        public abstract void Initialize();
 
         public abstract void Run(ActionInput input, System.Action OnFinish);
     }
@@ -124,7 +109,7 @@ namespace Assets.Scripts.AI
         {
             this.destination = destination;
 
-            this.postconditions = postconditions;
+            Postconditions = postconditions;
         }
 
         public void SetStartPosition(Vector3 start)
@@ -140,14 +125,19 @@ namespace Assets.Scripts.AI
 
         private void CalculateCost()
         {
-            cost = Mathf.RoundToInt((start - destination.position).magnitude);
+            Cost = Mathf.RoundToInt((start - destination.position).magnitude);
+        }
+
+        public override void Initialize()
+        {
+            throw new System.NotImplementedException();
         }
 
         public override void Run(ActionInput input, System.Action OnFinish)
         {
             if (path == null)
             {
-                path = input.pathfinder.FindPath(Vertex.VectorToVertex(input.playerTransform.position), Vertex.VectorToVertex(destination.position));
+                path = GameManager.dungeon.pathfinding.FindPath(Vertex.VectorToVertex(input.playerTransform.position), Vertex.VectorToVertex(destination.position));
                 current = 0;
 
                 if (path.Count < 1)
@@ -158,7 +148,10 @@ namespace Assets.Scripts.AI
             }
 
             input.movementController.SetInput(0, 1);
+            input.movementController.Run();
+
             input.lookController.SetInput(new Vector3(path[current].position.x, 0, path[current].position.y));
+            input.lookController.Run();
 
             if ((input.playerTransform.position - new Vector3(path[current].position.x, 0, path[current].position.y)).sqrMagnitude < 0.01f)
             {
@@ -185,10 +178,10 @@ namespace Assets.Scripts.AI
 
         public AUseObject(WorldState preconditions, WorldState postconditions, string animation, float duration)
         {
-            cost = 2;
+            Cost = 2;
 
-            this.preconditions = preconditions;
-            this.postconditions = postconditions;
+            Preconditions = preconditions;
+            Postconditions = postconditions;
 
             this.animation = animation;
             this.duration = duration;
@@ -199,10 +192,10 @@ namespace Assets.Scripts.AI
 
         public AUseObject(WorldState preconditions, WorldState postconditions, string animation, ConditionValuePair condition)
         {
-            cost = 2;
+            Cost = 2;
 
-            this.preconditions = preconditions;
-            this.postconditions = postconditions;
+            Preconditions = preconditions;
+            Postconditions = postconditions;
 
             this.animation = animation;
             this.condition = condition;
@@ -211,6 +204,10 @@ namespace Assets.Scripts.AI
             timer = 0;
         }
 
+        public override void Initialize()
+        {
+            throw new System.NotImplementedException();
+        }
 
         public override void Run(ActionInput input, System.Action OnFinish)
         {
@@ -237,10 +234,15 @@ namespace Assets.Scripts.AI
     {
         public AInvestigate()
         {
-            preconditions.SetCondition(Condition.AwareOfSound, -1, true);
-            preconditions.SetCondition(Condition.AwareOfPlayer, -1, false);
+            Preconditions.SetCondition(Conditions.AwareOfPlayer, false);
+            Preconditions.SetCondition(Conditions.AwareOfSound, true);
+            
+            Postconditions.SetCondition(Conditions.AwareOfSound, false);
+        }
 
-            postconditions.SetCondition(Condition.AwareOfSound, -1, false);
+        public override void Initialize()
+        {
+            throw new System.NotImplementedException();
         }
 
         public override void Run(ActionInput input, System.Action OnFinish)
@@ -251,17 +253,39 @@ namespace Assets.Scripts.AI
 
     public class ASearch : Action
     {
+        public float radius = 5;
+        private Stack<Room> searchRooms;
+        private bool currentRoomSearched;
+
         public ASearch()
         {
-            cost = 2;
-            preconditions.SetCondition(Condition.AwareOfPlayer, -1, true);
-            preconditions.SetCondition(Condition.CanSeePlayer, -1, false);
+            Cost = 2;
+            Preconditions.SetCondition(Conditions.AwareOfPlayer, true);
+            Preconditions.SetCondition(Conditions.CanSeePlayer, false);
 
-            postconditions.SetCondition(Condition.CanSeePlayer, -1, true);
+            Postconditions.SetCondition(Conditions.CanSeePlayer, true);
+        }
+
+        public override void Initialize()
+        {
+            throw new System.NotImplementedException();
         }
 
         public override void Run(ActionInput input, System.Action OnFinish)
         {
+            searchRooms = new();
+            currentRoomSearched = false;
+
+            foreach (Room room in GameManager.dungeon.rooms)
+            {
+                if (SquareDistance(room.Center, Vertex.VectorToVertex(input.aiController.transform.position)) <= radius * radius)
+                {
+                    searchRooms.Push(room);
+                }
+            }
+
+            
+
             OnFinish();
         }
     }
@@ -270,11 +294,16 @@ namespace Assets.Scripts.AI
     {
         public ARangedAttack()
         {
-            preconditions.SetCondition(Condition.CanSeePlayer, -1, true);
-            preconditions.SetCondition(Condition.HasRanged, -1, true);
-            preconditions.SetCondition(Condition.HasAmmo, -1, true);
+            Preconditions.SetCondition(Conditions.CanSeePlayer, true);
+            Preconditions.SetCondition(Conditions.HasRanged, true);
+            Preconditions.SetCondition(Conditions.HasAmmo, true);
+            
+            Postconditions.SetCondition(Conditions.PlayerDead, true);
+        }
 
-            postconditions.SetCondition(Condition.PlayerDead, -1, true);
+        public override void Initialize()
+        {
+            throw new System.NotImplementedException();
         }
 
         public override void Run(ActionInput input, System.Action OnFinish)
@@ -287,12 +316,17 @@ namespace Assets.Scripts.AI
     {
         public AMeleeAttack()
         {
-            cost = 2;
-            preconditions.SetCondition(Condition.CanSeePlayer, -1, true);
-            preconditions.SetCondition(Condition.NearPlayer, -1, true);
-            preconditions.SetCondition(Condition.HasMelee, -1, true);
+            Cost = 2;
+            Preconditions.SetCondition(Conditions.CanSeePlayer, true);
+            Preconditions.SetCondition(Conditions.NearPlayer, true);
+            Preconditions.SetCondition(Conditions.HasMelee, true);
 
-            postconditions.SetCondition(Condition.PlayerDead, -1, true);
+            Postconditions.SetCondition(Conditions.PlayerDead, true);
+        }
+
+        public override void Initialize()
+        {
+            throw new System.NotImplementedException();
         }
 
         public override void Run(ActionInput input, System.Action OnFinish)
@@ -305,11 +339,16 @@ namespace Assets.Scripts.AI
     {
         public AChase()
         {
-            cost = 2;
-            preconditions.SetCondition(Condition.CanSeePlayer, -1, true);
-            preconditions.SetCondition(Condition.NearPlayer, -1, false);
+            Cost = 2;
+            Preconditions.SetCondition(Conditions.CanSeePlayer, true);
+            Preconditions.SetCondition(Conditions.NearPlayer, false);
+            
+            Postconditions.SetCondition(Conditions.NearPlayer, true);
+        }
 
-            postconditions.SetCondition(Condition.NearPlayer, -1, true);
+        public override void Initialize()
+        {
+            throw new System.NotImplementedException();
         }
 
         public override void Run(ActionInput input, System.Action OnFinish)
@@ -322,11 +361,16 @@ namespace Assets.Scripts.AI
     {
         public ARecover()
         {
-            cost = 2;
-            preconditions.SetCondition(Condition.LowHealth, -1, true);
-            preconditions.SetCondition(Condition.NearHealth, -1, true);
+            Cost = 2;
+            Preconditions.SetCondition(Conditions.LowHealth, true);
+            Preconditions.SetCondition(Conditions.NearHealth, true);
+            
+            Postconditions.SetCondition(Conditions.LowHealth, false);
+        }
 
-            postconditions.SetCondition(Condition.LowHealth, -1, false);
+        public override void Initialize()
+        {
+            throw new System.NotImplementedException();
         }
 
         public override void Run(ActionInput input, System.Action OnFinish)

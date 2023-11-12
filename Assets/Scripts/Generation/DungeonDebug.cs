@@ -131,6 +131,21 @@ namespace Assets.Scripts.Generation
             Debug.DrawLine(topLeft, topRight, color, time);
         }
 
+        public static void DrawRectangle(Rectangle rectangle, float time, Color color)
+        {
+            Vertex[] vertices = rectangle.GetCornerVertices();
+
+            Vector3 topLeft = vertices[1].ToVector();
+            Vector3 topRight = vertices[2].ToVector();
+            Vector3 bottomLeft = vertices[0].ToVector();
+            Vector3 bottomRight = vertices[3].ToVector();
+
+            Debug.DrawLine(topRight, bottomRight, color, time);
+            Debug.DrawLine(bottomRight, bottomLeft, color, time);
+            Debug.DrawLine(bottomLeft, topLeft, color, time);
+            Debug.DrawLine(topLeft, topRight, color, time);
+        }
+
         public static void DrawText(string text, Vertex position)
         {
             GameObject go = new("Text");

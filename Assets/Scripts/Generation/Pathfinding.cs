@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using UnityEngine;
+using System.Collections.Generic;
 using static Assets.Scripts.Generation.DungeonGeneration;
 
 public class Node<T>
@@ -55,7 +56,7 @@ public class Pathfinding<T>
             for (int i = 1; i < open.Count; i++)
             {
                 closest = open[i];
-                if (closest.FCost < current.FCost || Approximately(closest.FCost, current.FCost))
+                if (closest.FCost < current.FCost || Mathf.Approximately(closest.FCost, current.FCost))
                 {
                     if (closest.hCost < current.hCost)
                         current = closest;

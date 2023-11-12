@@ -156,15 +156,13 @@ MonoBehaviour:
   - Character
   preconditions: []
   postconditions:
-  - condition: 0
-    specification: 0
+  - condition: hasAmmo
     value: 1
   terminationType: 0
   animationName: grabGroundItem
   animationDuration: 1
   terminationCondition:
-    condition: 0
-    specification: 0
+    condition: 
     value: 0
 --- !u!4 &74884398
 Transform:
@@ -174,7 +172,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 74884396}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 104, y: 0, z: 40}
+  m_LocalPosition: {x: 33.08, y: 0, z: 22.66}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -264,7 +262,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 384370827}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 33, y: 0, z: 60}
+  m_LocalPosition: {x: 21.05, y: 0, z: 53.6}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -551,7 +549,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: da03b06209aac1842b64f9a164064500, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enableDebugging: 0
+  enableDebugging: 1
   drawWallTiles: 0
   drawFloorTiles: 0
   hideWalls: 0

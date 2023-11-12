@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Assets.Scripts.Generation
 {
@@ -22,14 +23,14 @@ namespace Assets.Scripts.Generation
                 this.y = y;
             }
 
-            public static Vertex VectorToVertex(UnityEngine.Vector3 vector)
+            public static Vertex VectorToVertex(Vector3 vector)
             {
                 return new Vertex(vector.x, vector.z);
             }
 
-            public UnityEngine.Vector3 ToVector(float yOffset = 0)
+            public Vector3 ToVector(float yOffset = 0)
             {
-                return new UnityEngine.Vector3(x, yOffset, y);
+                return new Vector3(x, yOffset, y);
             }
 
             public Coordinate ToCoordinate()
@@ -154,6 +155,19 @@ namespace Assets.Scripts.Generation
                 }
             }
 
+            public Rectangle BoundingBox
+            {
+                get
+                {
+                    float xMin = GetExtrema(new() { u, v }, Extrema.xMinimum);
+                    float yMin = GetExtrema(new() { u, v }, Extrema.yMinimum);
+                    float xMax = GetExtrema(new() { u, v }, Extrema.xMaximum);
+                    float yMax = GetExtrema(new() { u, v }, Extrema.yMaximum);
+
+                    return new(xMin, yMin, xMax - xMin, yMax - yMin);
+                }
+            }
+
             public Edge(Vertex u, Vertex v)
             {
                 this.u = u;
@@ -166,21 +180,36 @@ namespace Assets.Scripts.Generation
                     || Approximately(left.u, right.v) && Approximately(left.v, right.u);
             }
 
-            public Vertex FindIntersection(Edge edge)
+            public bool FindIntersection(Edge edge, out Vertex vertex)
             {
-                // Parallel lines
-                if (Approximately(Slope, edge.Slope))
-                    return Vertex.Invalid;
+                vertex = default;
 
-                float xIntersection = (edge.u.x - u.x) / (Slope - edge.Slope);
-                float yIntersection = Slope * xIntersection + u.x;
+                if (!BoundingBox.Intersects(edge.BoundingBox)) return false;
 
-                return new(xIntersection, yIntersection);
+                float numeratorA = (u.x * v.y) - (u.y * v.x);
+                float numeratorB = (edge.u.x * edge.v.y) - (edge.u.y * edge.v.x);
+                float denominator = ((u.x - v.x) * (edge.u.y - edge.v.y)) - ((u.y - v.y) * (edge.u.x - edge.v.x));
+
+                if (Mathf.Approximately(denominator, 0))
+                    return false;
+
+                float xIntersection = (numeratorA * (edge.u.x - edge.v.x)) - ((u.x - v.x) * numeratorB);
+                xIntersection /= denominator;
+
+                float yIntersection = (numeratorA * (edge.u.y - edge.v.y)) - ((u.y - v.y) * numeratorB);
+                yIntersection /= denominator;
+
+                vertex = new(xIntersection, yIntersection);
+
+                if (!edge.BoundingBox.Contains(vertex))
+                    return false;
+
+                return true;
             }
 
             public bool PointIsOnEdge(Vertex vertex)
             {
-                return Approximately(Distance(vertex, u) + Distance(vertex, v), Length);
+                return Mathf.Approximately(Distance(vertex, u) + Distance(vertex, v), Length);
             }
         }
 
@@ -368,6 +397,10 @@ namespace Assets.Scripts.Generation
                 return new Vertex(xPosition + (width / 2), yPosition + (height / 2));
             }
 
+            /// <summary>
+            /// Returns corner vertices going in a clockwise-direction from the bottom-left vertex.
+            /// </summary>
+            /// <returns></returns>
             public Vertex[] GetCornerVertices()
             {
                 Vertex[] vertices = new Vertex[4];
@@ -375,9 +408,23 @@ namespace Assets.Scripts.Generation
                 vertices[0] = new(xPosition, yPosition);
                 vertices[1] = new(xPosition, yPosition + height);
                 vertices[2] = new(xPosition + width, yPosition + height);
-                vertices[3] = new(xPosition + width, height);
+                vertices[3] = new(xPosition + width, yPosition);
 
                 return vertices;
+            }
+
+            public bool Intersects(Rectangle rectangle)
+            {
+                return ((xPosition <= (rectangle.xPosition + rectangle.width))
+                    && ((xPosition + width) >= rectangle.xPosition)
+                    && (yPosition <= (rectangle.yPosition + rectangle.height))
+                    && ((yPosition + height) >= rectangle.yPosition));
+            }
+
+            public bool Contains(Vertex vertex)
+            {
+                return vertex.x >= xPosition && vertex.x <= xPosition + width
+                    && vertex.y >= yPosition && vertex.y <= yPosition + height;
             }
         }
 
@@ -429,24 +476,132 @@ namespace Assets.Scripts.Generation
                 spawn = vertices[Random.Range(0, vertices.Count - 1)];
 
                 // Create nodes for floor tiles
-                List<Node<Vertex>> nodes = new();
+                Node<Vertex>[,] nodes = new Node<Vertex>[grid.GetLength(0), grid.GetLength(1)];
 
-                Vertex intersection;
-                foreach (Edge edge in edges)
+                for (int x = 0; x < grid.GetLength(0); x++)
                 {
-                    foreach (Room room in rooms)
+                    for (int y = 0; y < grid.GetLength(1); y++)
                     {
-                        foreach (Edge roomEdge in room.GetEdges())
-                        {
-                            intersection = edge.FindIntersection(roomEdge);
-                            if (Approximately(intersection, Vertex.Invalid)) continue;
+                        if (grid[x, y] != TileType.Floor) continue;
 
-                            nodes.Add(new(intersection));
-                        }
+                        nodes[x, y] = new(new Vertex(x + 0.5f, y + 0.5f));
                     }
                 }
 
-                pathfinding = new(nodes);
+                for (int x = 0; x < grid.GetLength(0); x++)
+                {
+                    for (int y = 0; y < grid.GetLength(1); y++)
+                    {
+                        if (nodes[x, y] == null) continue;
+
+                        IterateArea(-1, -1, 1, 1, (ix, iy) =>
+                        {
+                            if (ix == 0 && iy == 0) return;
+                            if (ix + x <= 0 || iy + y <= 0) return;
+                            if (ix + x >= grid.GetLength(0) || iy + y >= grid.GetLength(1)) return;
+                            if (nodes[ix + x, iy + y] == null) return;
+
+                            nodes[x, y].neighbors.Add(nodes[ix + x, iy + y]);
+                        });
+                    }
+                }
+
+                //Node<Vertex> tmpNode;
+
+                //Dictionary<Room, List<Node<Vertex>>> roomNodes = new();
+                //Dictionary<Edge, List<Node<Vertex>>> edgeNodes = new();
+
+                //Vertex intersection;
+                //foreach (Edge edge in edges)
+                //{
+                //    edgeNodes.TryAdd(edge, new());
+
+                //    foreach (Room room in rooms)
+                //    {
+                //        tmpNode = new(room.Center);
+
+                //        nodes.Add(new(room.Center));
+
+                //        if (!roomNodes.TryAdd(room, new() { tmpNode }))
+                //        {
+                //            if (roomNodes[room].Any(node => node.position == tmpNode.position)) break;
+
+                //            roomNodes[room].Add(tmpNode);
+                //        }
+
+                //        foreach (Edge roomEdge in room.GetEdges())
+                //        {
+                //            if (edge.FindIntersection(roomEdge, out Vertex vertex))
+                //            {
+                //                intersection = vertex;
+
+                //                tmpNode = new(intersection);
+
+                //                nodes.Add(new(intersection));
+
+                //                if (!roomNodes[room].Any(node => node.position == tmpNode.position))
+                //                    roomNodes[room].Add(tmpNode);
+
+                //                if (!edgeNodes[edge].Any(node => node.position == tmpNode.position))
+                //                    edgeNodes[edge].Add(tmpNode);
+                //            }
+                //        }
+                //    }
+                //}
+
+                //foreach (Room key in roomNodes.Keys)
+                //{
+                //    foreach (Node<Vertex> current in roomNodes[key])
+                //    {
+                //        foreach (Node<Vertex> neighbor in roomNodes[key])
+                //        {
+                //            if (current.position == neighbor.position) continue;
+                //            if (current.neighbors.Any(node => node.position == neighbor.position)) continue;
+
+                //            current.neighbors.Add(neighbor);
+                //        }
+                //    }
+                //}
+
+                //foreach (Edge edge in edgeNodes.Keys)
+                //{
+                //    foreach (Node<Vertex> current in edgeNodes[edge])
+                //    {
+                //        foreach (Node<Vertex> neighbor in edgeNodes[edge])
+                //        {
+                //            if (current.position == neighbor.position) continue;
+                //            if (current.neighbors.Any(node => node.position == neighbor.position)) continue;
+
+                //            current.neighbors.Add(neighbor);
+                //        }
+                //    }
+                //}
+
+                //nodes.ForEach((node) =>
+                //{
+                //    if (node.neighbors.Count == 0)
+                //        GameObject.CreatePrimitive(PrimitiveType.Sphere).transform.position = node.position.ToVector();
+                //    else
+                //        GameObject.CreatePrimitive(PrimitiveType.Cube).transform.position = node.position.ToVector();
+                //});
+
+                //nodes.RemoveAll(node => node.neighbors.Count == 0);
+                ////nodes.ForEach((node) => GameObject.CreatePrimitive(PrimitiveType.Cube).transform.position = node.position.ToVector());
+
+                List<Node<Vertex>> nodesList = new();
+
+                for (int x = 0; x < grid.GetLength(0); x++)
+                {
+                    for (int y = 0; y < grid.GetLength(1); y++)
+                    {
+                        if (nodes[x, y] == null) continue;
+
+                        nodesList.Add(nodes[x, y]);
+                    }
+                }
+
+
+                pathfinding = new(nodesList);
 
                 this.settings = settings;
             }
@@ -518,19 +673,9 @@ namespace Assets.Scripts.Generation
             return Mathf.Pow(v1.x - v2.x, 2) + Mathf.Pow(v1.y - v2.y, 2);
         }
 
-        public static bool Approximately(float a, float b)
-        {
-            return Mathf.Abs(a - b) <= float.Epsilon * Mathf.Abs(a + b) * 2 || Mathf.Abs(a - b) < float.MinValue;
-        }
-
         public static bool Approximately(Vertex a, Vertex b)
         {
-            return Approximately(a.x, b.x) && Approximately(a.y, b.y);
-        }
-
-        public static bool Approximately(Vector3 a, Vector3 b)
-        {
-            return Approximately(a.x, b.x) && Approximately(a.y, b.y) && Approximately(a.z, b.z);
+            return Mathf.Approximately(a.x, b.x) && Mathf.Approximately(a.y, b.y);
         }
 
         public static void IterateArea(int x1, int y1, int x2, int y2, System.Action<int, int> function)

@@ -48,16 +48,16 @@ namespace Assets.Scripts.AI
             actions.Add(Actions.Recover);
 
             goalWorldState = new(new());
-            goalWorldState.SetCondition(Condition.PlayerDead, -1, true);
+            goalWorldState.SetCondition(Conditions.PlayerDead, true);
 
             currentWorldState = new WorldState(new());
-            currentWorldState.SetCondition(Condition.HasAmmo, -1, false);
-            currentWorldState.SetCondition(Condition.HasRanged, -1, true);
-            currentWorldState.SetCondition(Condition.HasMelee, -1, false);
-            currentWorldState.SetCondition(Condition.PlayerDead, -1, false);
-            currentWorldState.SetCondition(Condition.CanSeePlayer, -1, false);
-            currentWorldState.SetCondition(Condition.NearPlayer, -1, true);
-            currentWorldState.SetCondition(Condition.AwareOfPlayer, -1, true);
+            currentWorldState.SetCondition(Conditions.HasAmmo, false);
+            currentWorldState.SetCondition(Conditions.HasRanged, true);
+            currentWorldState.SetCondition(Conditions.HasMelee, false);
+            currentWorldState.SetCondition(Conditions.PlayerDead, false);
+            currentWorldState.SetCondition(Conditions.CanSeePlayer, false);
+            currentWorldState.SetCondition(Conditions.NearPlayer, true);
+            currentWorldState.SetCondition(Conditions.AwareOfPlayer, true);
 
             currentPath = null;
             currentAction = null;
@@ -77,11 +77,11 @@ namespace Assets.Scripts.AI
 
             if (currentAction == null) return;
 
-            currentAction.Run(new ActionInput(transform, movementController, lookController, animator, this, GameManager.dungeon.pathfinding), () =>
+            currentAction.Run(new ActionInput(transform, movementController, lookController, animator, this), () =>
             {
-                foreach (ConditionValuePair condition in currentAction.postconditions.Conditions)
+                foreach (ConditionValuePair condition in currentAction.Postconditions.Conditions)
                 {
-                    currentWorldState.SetCondition(condition.condition, condition.specification, condition.value);
+                    currentWorldState.SetCondition(condition.condition, condition.value);
                 }
 
                 StartNextAction();
@@ -90,6 +90,8 @@ namespace Assets.Scripts.AI
 
         private void StartNextAction()
         {
+            Debug.Log(currentPath.Peek());
+
             if (currentPath.TryPop(out Action action))
                 currentAction = action;
             else
@@ -99,8 +101,6 @@ namespace Assets.Scripts.AI
 
                 return;
             }
-
-            Debug.Log(currentAction);
         }
 
         private bool TryFindPath(out Stack<Action> path)
@@ -144,7 +144,7 @@ namespace Assets.Scripts.AI
 
                 // No path
                 if (current == null)
-                    return false;
+                    return new();
 
                 // If found path
                 if (current.state.MatchesState(goalWorldState))
@@ -162,9 +162,9 @@ namespace Assets.Scripts.AI
                 // Find connections
                 foreach (Action action in actions)
                 {
-                    if (current.state.MatchesState(action.GetPreconditions()))
+                    if (current.state.MatchesState(action.Preconditions))
                     {
-                        StateNode newNode = new(WorldState.CombineStates(current.state, action.postconditions));
+                        StateNode newNode = new(WorldState.CombineStates(current.state, action.Postconditions));
                         newNode.parentAction = action;
 
                         if (usedActions.Contains(newNode.parentAction))
@@ -193,7 +193,7 @@ namespace Assets.Scripts.AI
                 {
                     if (closed.Contains(connection)) continue;
 
-                    float cost = current.gCost + connection.parentAction.cost;
+                    float cost = current.gCost + connection.parentAction.Cost;
 
                     current.hCost = FindHCost(current.state, goalWorldState);
 
@@ -227,7 +227,7 @@ namespace Assets.Scripts.AI
                     goToTemp.SetStartPosition(transform.position);
                 }
 
-                if (current.MatchesState(action.preconditions) && goal.MatchesState(action.postconditions))
+                if (current.MatchesState(action.Preconditions) && goal.MatchesState(action.Postconditions))
                     return action;
             }
 
@@ -243,9 +243,9 @@ namespace Assets.Scripts.AI
 
             foreach (ConditionValuePair condition in goal.Conditions)
             {
-                if (current.ContainsCondition(condition.condition, condition.specification))
+                if (current.ContainsCondition(condition))
                 {
-                    if (current.GetCondition(condition.condition, condition.specification) == goal.GetCondition(condition.condition, condition.specification))
+                    if (current.GetCondition(condition) == goal.GetCondition(condition))
                         continue;
                 }
 
@@ -257,25 +257,25 @@ namespace Assets.Scripts.AI
 
         public void AddSmartObject(ISmartObject smartObject)
         {
-            WorldState goToPostcondition = new WorldState(new());
-            goToPostcondition.SetCondition(Condition.NearObject, smartObject.GetHashCode(), true);
-            actions.Add(new AGoTo(smartObject.GetTransform(), goToPostcondition));
+            WorldState precondition = smartObject.GetPreconditions();
+            precondition.SetCondition(Conditions.NearObject + smartObject.GetHashCode(), true);
 
-            WorldState usePrecondition = smartObject.GetPreconditions();
-            usePrecondition.SetCondition(Condition.NearObject, smartObject.GetHashCode(), true);
+            WorldState postcondition = new WorldState(new());
+            postcondition.SetCondition(Conditions.NearObject + smartObject.GetHashCode(), true);
 
             AUseObject useObject;
             switch (smartObject.GetAnimationTerminationType())
             {
                 case TerminationType.Condition:
-                    useObject = new(usePrecondition, smartObject.GetPostconditions(), smartObject.GetAnimationName(), smartObject.GetAnimationCondition());
+                    useObject = new(precondition, smartObject.GetPostconditions(), smartObject.GetAnimationName(), smartObject.GetAnimationCondition());
                     break;
                 default:
-                    useObject = new(usePrecondition, smartObject.GetPostconditions(), smartObject.GetAnimationName(), smartObject.GetAnimationDuration());
+                    useObject = new(precondition, smartObject.GetPostconditions(), smartObject.GetAnimationName(), smartObject.GetAnimationDuration());
                     break;
             }
 
             actions.Add(useObject);
+            actions.Add(new AGoTo(smartObject.GetTransform(), postcondition));
         }
     }
 }
