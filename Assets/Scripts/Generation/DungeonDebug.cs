@@ -9,6 +9,10 @@ namespace Assets.Scripts.Generation
         private static Dungeon dungeon;
         public static DungeonDebug instance;
 
+        public Material dungeonMaterial;
+        public Shader litShader;
+        public Shader unlitShader;
+
         public bool enableDebugging = false;
         public bool drawWallTiles = false;
         public bool drawFloorTiles = false;
@@ -16,6 +20,7 @@ namespace Assets.Scripts.Generation
         public bool hideFloor = false;
         public bool drawEdges = false;
         public bool drawRooms = false;
+        public bool drawLighting = false;
 
         public float spacing = 0.1f;
 
@@ -46,6 +51,7 @@ namespace Assets.Scripts.Generation
             ToggleFloor();
             DrawEdges();
             DrawRooms();
+            ToggleLighting();
         }
 
         public static void DrawWallsTiles()
@@ -116,6 +122,11 @@ namespace Assets.Scripts.Generation
             {
                 DrawRectangle(room.xPosition, room.yPosition, room.width, room.height, 0, Color.cyan);
             }
+        }
+
+        public static void ToggleLighting()
+        {
+            instance.dungeonMaterial.shader = instance.drawLighting ? instance.litShader : instance.unlitShader;
         }
 
         public static void DrawRectangle(float x, float y, float width, float height, float time, Color color)

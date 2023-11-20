@@ -18,13 +18,13 @@ namespace Assets.Scripts.AI
         private CombatController combatController;
         private Animator animator;
 
-        private List<Action> actions;
+        private List<IAction> actions;
 
         public WorldState currentWorldState { get; private set; }
         private WorldState goalWorldState;
 
-        private Stack<Action> currentPath;
-        private Action currentAction;
+        private Stack<IAction> currentPath;
+        private IAction currentAction;
 
         // Navigation
         private Vector3 destination = Vector3.zero;
@@ -37,15 +37,7 @@ namespace Assets.Scripts.AI
             animator = GetComponent<Animator>();
 
             // Initialize AI
-            Actions.CreateActions();
-
-            actions = new();
-            actions.Add(Actions.Investigate);
-            actions.Add(Actions.Search);
-            actions.Add(Actions.MeleeAttack);
-            actions.Add(Actions.RangedAttack);
-            actions.Add(Actions.Chase);
-            actions.Add(Actions.Recover);
+            CreateActions();
 
             goalWorldState = new(new());
             goalWorldState.SetCondition(Conditions.PlayerDead, true);
@@ -69,7 +61,7 @@ namespace Assets.Scripts.AI
 
             if (currentPath == null)
             {
-                if (!TryFindPath(out Stack<Action> path)) return;
+                if (!TryFindPath(out Stack<IAction> path)) return;
 
                 currentPath = path;
                 StartNextAction();
@@ -77,22 +69,12 @@ namespace Assets.Scripts.AI
 
             if (currentAction == null) return;
 
-            currentAction.Run(new ActionInput(transform, movementController, lookController, animator, this), () =>
-            {
-                foreach (ConditionValuePair condition in currentAction.Postconditions.Conditions)
-                {
-                    currentWorldState.SetCondition(condition.condition, condition.value);
-                }
-
-                StartNextAction();
-            });
+            currentAction.Run();
         }
 
         private void StartNextAction()
         {
-            Debug.Log(currentPath.Peek());
-
-            if (currentPath.TryPop(out Action action))
+            if (currentPath.TryPop(out IAction action))
                 currentAction = action;
             else
             {
@@ -103,7 +85,7 @@ namespace Assets.Scripts.AI
             }
         }
 
-        private bool TryFindPath(out Stack<Action> path)
+        private bool TryFindPath(out Stack<IAction> path)
         {
             path = new();
 
@@ -117,7 +99,7 @@ namespace Assets.Scripts.AI
             open.Add(startNode);
             List<StateNode> closed = new();
 
-            List<Action> usedActions = new();
+            List<IAction> usedActions = new();
             List<StateNode> allNodes = new();
 
             StateNode current;
@@ -127,13 +109,13 @@ namespace Assets.Scripts.AI
 
                 // Get cheapest
                 StateNode cheapest = current;
-                int cheapestCost = current.fCost;
+                int cheapestCost = current.FCost;
                 for (int i = 0; i < open.Count; i++)
                 {
-                    if (open[i].fCost < cheapestCost)
+                    if (open[i].FCost < cheapestCost)
                     {
                         cheapest = open[i];
-                        cheapestCost = cheapest.fCost;
+                        cheapestCost = cheapest.FCost;
                     }
                 }
 
@@ -160,7 +142,7 @@ namespace Assets.Scripts.AI
                 }
 
                 // Find connections
-                foreach (Action action in actions)
+                foreach (IAction action in actions)
                 {
                     if (current.state.MatchesState(action.Preconditions))
                     {
@@ -202,7 +184,7 @@ namespace Assets.Scripts.AI
                     // Adds each neighbor cheaper than current node to open set
                     if (cost < connection.gCost || !openContainsNeighbor)
                     {
-                        connection.gCost = current.fCost;
+                        connection.gCost = current.FCost;
                         connection.hCost = FindHCost(connection.state, goalWorldState);
                         connection.parentNode = current;
                         connection.currentPosition = transform.position;
@@ -214,24 +196,6 @@ namespace Assets.Scripts.AI
             }
 
             return false;
-        }
-
-        private Action GetConnectingAction(WorldState current, WorldState goal)
-        {
-            foreach (Action action in actions)
-            {
-                AGoTo goToTemp;
-                if (action.GetType() == typeof(AGoTo))
-                {
-                    goToTemp = (AGoTo)action;
-                    goToTemp.SetStartPosition(transform.position);
-                }
-
-                if (current.MatchesState(action.Preconditions) && goal.MatchesState(action.Postconditions))
-                    return action;
-            }
-
-            return null;
         }
 
         private int FindHCost(WorldState current, WorldState goal)
@@ -257,25 +221,45 @@ namespace Assets.Scripts.AI
 
         public void AddSmartObject(ISmartObject smartObject)
         {
-            WorldState precondition = smartObject.GetPreconditions();
+            WorldState precondition = smartObject.Preconditions;
             precondition.SetCondition(Conditions.NearObject + smartObject.GetHashCode(), true);
 
             WorldState postcondition = new WorldState(new());
             postcondition.SetCondition(Conditions.NearObject + smartObject.GetHashCode(), true);
 
-            AUseObject useObject;
-            switch (smartObject.GetAnimationTerminationType())
+            actions.Add(new UseObject(precondition, smartObject.Postconditions, smartObject.AnimationData, this, animator, MoveToNextAction));
+            actions.Add(new GoTo(smartObject.Transform, postcondition, movementController, lookController, MoveToNextAction));
+        }
+
+        private void CreateActions()
+        {
+            // Initialize AI
+            actions = new();
+
+            Investigate investigateAction = new Investigate(MoveToNextAction);
+
+            Search searchAction = new Search(MoveToNextAction, this);
+            MeleeAttack meleeAttackAction = new MeleeAttack(MoveToNextAction);
+            RangedAttack rangedAttackAction = new RangedAttack(MoveToNextAction);
+            Chase chaseAction = new Chase(MoveToNextAction);
+            Recover recoverAction = new Recover(MoveToNextAction);
+
+            actions.Add(investigateAction);
+            actions.Add(searchAction);
+            actions.Add(meleeAttackAction);
+            actions.Add(rangedAttackAction);
+            actions.Add(chaseAction);
+            actions.Add(recoverAction);
+        }
+
+        private void MoveToNextAction()
+        {
+            foreach (ConditionValuePair condition in currentAction.Postconditions.Conditions)
             {
-                case TerminationType.Condition:
-                    useObject = new(precondition, smartObject.GetPostconditions(), smartObject.GetAnimationName(), smartObject.GetAnimationCondition());
-                    break;
-                default:
-                    useObject = new(precondition, smartObject.GetPostconditions(), smartObject.GetAnimationName(), smartObject.GetAnimationDuration());
-                    break;
+                currentWorldState.SetCondition(condition.condition, condition.value);
             }
 
-            actions.Add(useObject);
-            actions.Add(new AGoTo(smartObject.GetTransform(), postcondition));
+            StartNextAction();
         }
     }
 }

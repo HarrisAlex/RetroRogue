@@ -26,7 +26,7 @@ public class SmartObjectManager : MonoBehaviour
 
             foreach (ISmartObject smartObject in children)
             {
-                List<Type> validAgents = smartObject.GetAllowedTypes();
+                List<Type> validAgents = smartObject.AllowedTypes;
                 foreach (Type type in validAgents)
                 {
                     if (type == null) continue;

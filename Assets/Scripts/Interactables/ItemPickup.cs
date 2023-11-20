@@ -1,5 +1,4 @@
 using Assets.Scripts.AI;
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -11,64 +10,49 @@ public class ItemPickup : MonoBehaviour, IInteractable, ISmartObject
     [SerializeField] private List<ConditionValuePair> postconditions;
 
     [Header("Animation settings")]
-    [SerializeField] private TerminationType terminationType;
-    [SerializeField] private string animationName;
+    [SerializeField] private new AnimationClip animation;
+    [SerializeField] private AnimationData.ExitType animationExitType;
     [SerializeField] private float animationDuration;
-    [SerializeField] private ConditionValuePair terminationCondition;
+    [SerializeField] private bool useAnimationClipDuration;
+    [SerializeField] private ConditionValuePair animationExitCondition;
 
-    public WorldState GetPostconditions()
+    public List<System.Type> AllowedTypes
     {
-        return new(postconditions);
-    }
-
-    public WorldState GetPreconditions()
-    {
-        return new(preconditions);
-    }
-
-    public Transform GetTransform()
-    {
-        return transform;
-    }
-
-    public List<Type> GetAllowedTypes()
-    {
-        List<Type> result = new();
-
-        foreach (string character in allowedTypes)
+        get
         {
-            Type type = Type.GetType("Assets.Scripts.AI." + character);
+            List<System.Type> result = new();
 
-            if (!result.Contains(type))
-                result.Add(type);
+            foreach (string character in allowedTypes)
+            {
+                System.Type type = System.Type.GetType("Assets.Scripts.AI." + character);
+
+                if (!result.Contains(type))
+                    result.Add(type);
+            }
+
+            return result;
         }
-
-        return result;
     }
+    public WorldState Preconditions => new(preconditions);
+    public WorldState Postconditions => new(postconditions);
+    public Transform Transform => transform;
+    public AnimationData AnimationData
+    {
+        get
+        {
+            float duration = (useAnimationClipDuration && animation != null) ? animation.length : animationDuration;
 
+            if (animationExitType == AnimationData.ExitType.Time)
+            {
+                return new(animation, duration);
+            }
+            else
+                return new(animation, animationExitCondition);
+        }
+    }
 
     public void Interact()
     {
         throw new System.NotImplementedException();
-    }
-
-    public TerminationType GetAnimationTerminationType()
-    {
-        return terminationType;
-    }
-
-    public string GetAnimationName()
-    {
-        return animationName;
-    }
-
-    public float GetAnimationDuration()
-    {
-        return animationDuration;
-    }
-
-    public ConditionValuePair GetAnimationCondition()
-    {
-        return terminationCondition;
     }
 }

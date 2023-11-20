@@ -158,10 +158,11 @@ MonoBehaviour:
   postconditions:
   - condition: hasAmmo
     value: 1
-  terminationType: 0
-  animationName: grabGroundItem
+  animation: {fileID: 0}
+  animationExitType: 0
   animationDuration: 1
-  terminationCondition:
+  useAnimationClipDuration: 0
+  animationExitCondition:
     condition: 
     value: 0
 --- !u!4 &74884398
@@ -549,6 +550,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: da03b06209aac1842b64f9a164064500, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  dungeonMaterial: {fileID: 2100000, guid: c06c2ce82be9f1d44abf50a55ed09bf4, type: 2}
+  litShader: {fileID: 4800000, guid: c26e062734dccee4e8b5193e65cb14fe, type: 3}
+  unlitShader: {fileID: 10752, guid: 0000000000000000f000000000000000, type: 0}
   enableDebugging: 1
   drawWallTiles: 0
   drawFloorTiles: 0
@@ -556,6 +560,7 @@ MonoBehaviour:
   hideFloor: 0
   drawEdges: 0
   drawRooms: 0
+  drawLighting: 0
   spacing: 0.05
 --- !u!114 &838776642
 MonoBehaviour:

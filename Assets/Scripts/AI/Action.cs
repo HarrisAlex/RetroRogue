@@ -24,46 +24,56 @@ namespace Assets.Scripts.AI
         }
     }
 
-    public abstract class Action
+    public interface IAction
     {
-        public int Cost { get; protected set; }
-        public WorldState Preconditions { get; protected set; }
-        public WorldState Postconditions { get; protected set; }
+        public int Cost { get; }
+        public WorldState Preconditions { get; }
+        public WorldState Postconditions { get; }
+        public System.Action OnFinish { get; }
 
-        public Action()
-        {
-            Cost = 1;
-            Preconditions = new(new());
-            Postconditions = new(new());
-        }
-
-        public Action(int cost, WorldState preconditions, WorldState postconditions)
-        {
-            Cost = cost;
-            Preconditions = preconditions;
-            Postconditions = postconditions;
-        }
-
-        public abstract void Initialize();
-
-        public abstract void Run(ActionInput input, System.Action OnFinish);
+        public void Initialize();
+        public void Run();
     }
 
-    public enum TerminationType
+    [System.Serializable]
+    public struct AnimationData
     {
-        Time,
-        Condition,
-    }
+        public enum ExitType
+        {
+            Time,
+            Condition,
+        }
 
+        public readonly AnimationClip animation;
+        public readonly ExitType exitType;
+        public readonly float duration;
+        public readonly ConditionValuePair exitCondition;
+
+        public AnimationData(AnimationClip animation, ConditionValuePair exitCondition)
+        {
+            this.animation = animation;
+            exitType = ExitType.Condition;
+            duration = -1;
+            this.exitCondition = exitCondition;
+        }
+
+        public AnimationData(AnimationClip animation, float duration)
+        {
+            this.animation = animation;
+            exitType = ExitType.Time;
+            this.duration = duration;
+            exitCondition = default;
+        }
+    }
 
     public class StateNode
     {
-        public WorldState state { get; private set; }
+        public readonly WorldState state;
         public int gCost;
         public int hCost;
-        public int fCost { get => gCost + hCost; }
+        public int FCost { get => gCost + hCost; }
 
-        public Action parentAction;
+        public IAction parentAction;
         public StateNode parentNode;
         public List<StateNode> connections;
         public Vector3 currentPosition;
@@ -75,29 +85,7 @@ namespace Assets.Scripts.AI
         }
     }
 
-    // Actions
-    public class Actions
-    {
-        public static AInvestigate Investigate;
-        public static ASearch Search;
-
-        public static ARangedAttack RangedAttack;
-        public static AMeleeAttack MeleeAttack;
-        public static AChase Chase;
-        public static ARecover Recover;
-
-        public static void CreateActions()
-        {
-            Investigate = new();
-            Search = new();
-            RangedAttack = new();
-            MeleeAttack = new();
-            Chase = new();
-            Recover = new();
-        }
-    }
-
-    public class AGoTo : Action
+    public class GoTo : IAction
     {
         private Transform destination;
         private Vector3 start;
@@ -105,11 +93,25 @@ namespace Assets.Scripts.AI
         private List<Node<Vertex>> path;
         private int current;
 
-        public AGoTo(Transform destination, WorldState postconditions)
+        public int Cost { get; private set; }
+        public WorldState Preconditions { get; private set; }
+        public WorldState Postconditions { get; private set; }
+        public System.Action OnFinish { get; private set; }
+
+        private MovementController movementController;
+        private LookController lookController;
+
+        public GoTo(Transform destination, WorldState postconditions, MovementController movementController, LookController lookController, System.Action onFinish)
         {
             this.destination = destination;
 
+            Preconditions = new(new());
             Postconditions = postconditions;
+
+            this.movementController = movementController;
+            this.lookController = lookController;
+
+            OnFinish = onFinish;
         }
 
         public void SetStartPosition(Vector3 start)
@@ -118,26 +120,18 @@ namespace Assets.Scripts.AI
             CalculateCost();
         }
 
-        public Vector3 GetDestination()
-        {
-            return destination.position;
-        }
-
         private void CalculateCost()
         {
             Cost = Mathf.RoundToInt((start - destination.position).magnitude);
         }
 
-        public override void Initialize()
-        {
-            throw new System.NotImplementedException();
-        }
+        public void Initialize() { }
 
-        public override void Run(ActionInput input, System.Action OnFinish)
+        public void Run()
         {
             if (path == null)
             {
-                path = GameManager.dungeon.pathfinding.FindPath(Vertex.VectorToVertex(input.playerTransform.position), Vertex.VectorToVertex(destination.position));
+                path = GameManager.dungeon.pathfinding.FindPath(Vertex.VectorToVertex(movementController.transform.position), Vertex.VectorToVertex(destination.position));
                 current = 0;
 
                 if (path.Count < 1)
@@ -147,13 +141,13 @@ namespace Assets.Scripts.AI
                 }
             }
 
-            input.movementController.SetInput(0, 1);
-            input.movementController.Run();
+            movementController.SetInput(0, 1);
+            movementController.Run();
 
-            input.lookController.SetInput(new Vector3(path[current].position.x, 0, path[current].position.y));
-            input.lookController.Run();
+            lookController.SetInput(new Vector3(path[current].position.x, 0, path[current].position.y));
+            lookController.Run();
 
-            if ((input.playerTransform.position - new Vector3(path[current].position.x, 0, path[current].position.y)).sqrMagnitude < 0.01f)
+            if ((movementController.transform.position - new Vector3(path[current].position.x, 0, path[current].position.y)).sqrMagnitude < 0.01f)
             {
                 current++;
 
@@ -166,63 +160,54 @@ namespace Assets.Scripts.AI
         }
     }
 
-    public class AUseObject : Action
+    public class UseObject : IAction
     {
-        private string animation;
-        private TerminationType terminationType;
-
-        private float duration;
-        private ConditionValuePair condition;
+        private AnimationData animationData;
 
         private float timer;
 
-        public AUseObject(WorldState preconditions, WorldState postconditions, string animation, float duration)
+        public int Cost { get; private set; }
+
+        public WorldState Preconditions { get; private set; }
+        public WorldState Postconditions { get; private set; }
+        public System.Action OnFinish { get; private set; }
+
+        private AIController aiController;
+        private Animator animator;
+
+        public UseObject(WorldState preconditions, WorldState postconditions, AnimationData animationData, AIController aiController, Animator animator, System.Action onFinish)
         {
             Cost = 2;
 
             Preconditions = preconditions;
             Postconditions = postconditions;
 
-            this.animation = animation;
-            this.duration = duration;
-            terminationType = TerminationType.Time;
+            this.animationData = animationData;
+            this.aiController = aiController;
+            this.animator = animator;
 
             timer = 0;
+
+            OnFinish = onFinish;
         }
 
-        public AUseObject(WorldState preconditions, WorldState postconditions, string animation, ConditionValuePair condition)
+        public void Initialize() { }
+
+        public void Run()
         {
-            Cost = 2;
+            if (animationData.animation != null)
+                animator.CrossFade(animationData.animation.name, 0.1f);
 
-            Preconditions = preconditions;
-            Postconditions = postconditions;
-
-            this.animation = animation;
-            this.condition = condition;
-            terminationType = TerminationType.Condition;
-
-            timer = 0;
-        }
-
-        public override void Initialize()
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public override void Run(ActionInput input, System.Action OnFinish)
-        {
-            input.animator.CrossFade(animation, 0.1f);
-
-            if (terminationType == TerminationType.Time)
+            if (animationData.exitType == AnimationData.ExitType.Time)
             {
                 timer += Time.deltaTime;
 
-                if (timer < duration)
+                if (timer < animationData.duration)
                     return;
             }
             else
             {
-                if (!input.aiController.currentWorldState.MatchesState(condition))
+                if (!aiController.currentWorldState.MatchesState(animationData.exitCondition))
                     return;
             }
 
@@ -230,150 +215,288 @@ namespace Assets.Scripts.AI
         }
     }
 
-    public class AInvestigate : Action
+    public class Investigate : IAction
     {
-        public AInvestigate()
+        public int Cost { get; private set; }
+
+        public WorldState Preconditions { get; private set; }
+        public WorldState Postconditions { get; private set; }
+        public System.Action OnFinish { get; private set; }
+
+        public Investigate(System.Action onFinish)
         {
+            Preconditions = new(new());
+            Postconditions = new(new());
+
             Preconditions.SetCondition(Conditions.AwareOfPlayer, false);
             Preconditions.SetCondition(Conditions.AwareOfSound, true);
-            
+
             Postconditions.SetCondition(Conditions.AwareOfSound, false);
+
+            OnFinish = onFinish;
         }
 
-        public override void Initialize()
-        {
-            throw new System.NotImplementedException();
-        }
+        public void Initialize() { }
 
-        public override void Run(ActionInput input, System.Action OnFinish)
+        public void Run()
         {
             OnFinish();
         }
     }
 
-    public class ASearch : Action
+    public class Search : IAction
     {
-        public float radius = 5;
-        private Stack<Room> searchRooms;
-        private bool currentRoomSearched;
-
-        public ASearch()
+        private struct SearchRoom
         {
+            public Room room;
+            public Stack<Vertex> searchPoints;
+
+            public SearchRoom(Room room, float searchPointDensity)
+            {
+                this.room = room;
+                searchPoints = new();
+
+                int count = Mathf.RoundToInt(room.Area * (searchPointDensity / 16));
+                for (int i = 0; i < count; i++)
+                {
+                    searchPoints.Push(new(room.xPosition + Random.Range(0, room.width), room.yPosition + Random.Range(0, room.height)));
+                }
+            }
+
+            public bool TryFindNextPath(Vertex currentPosition, out List<Node<Vertex>> path)
+            {
+                path = new();
+
+                Vertex nextPoint = Vertex.Invalid;
+                while (nextPoint == Vertex.Invalid && searchPoints.Count == 0)
+                {
+                    nextPoint = searchPoints.Pop();
+                }
+
+                if (nextPoint == null)
+                    return false;
+
+                path = GameManager.dungeon.pathfinding.FindPath(currentPosition, nextPoint);
+                return true;
+            }
+        }
+
+        public float radius = 5;
+        public float searchPointDensity = 8;
+
+        private Stack<SearchRoom> searchRooms;
+        private SearchRoom currentSearchRoom;
+        private List<Node<Vertex>> path;
+        private int currentPathIndex;
+
+        public int Cost { get; private set; }
+
+        public WorldState Preconditions { get; private set; }
+        public WorldState Postconditions { get; private set; }
+        public System.Action OnFinish { get; private set; }
+
+        private AIController aiController;
+        private MovementController movementController;
+        private LookController lookController;
+
+        public Search(System.Action onFinish, AIController aiController)
+        {
+            Preconditions = new(new());
+            Postconditions = new(new());
+
             Cost = 2;
             Preconditions.SetCondition(Conditions.AwareOfPlayer, true);
             Preconditions.SetCondition(Conditions.CanSeePlayer, false);
 
             Postconditions.SetCondition(Conditions.CanSeePlayer, true);
+
+            this.aiController = aiController;
+
+            OnFinish = onFinish;
         }
 
-        public override void Initialize()
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public override void Run(ActionInput input, System.Action OnFinish)
+        public void Initialize()
         {
             searchRooms = new();
-            currentRoomSearched = false;
 
             foreach (Room room in GameManager.dungeon.rooms)
             {
-                if (SquareDistance(room.Center, Vertex.VectorToVertex(input.aiController.transform.position)) <= radius * radius)
+                if (SquareDistance(room.Center, Vertex.VectorToVertex(aiController.transform.position)) <= radius * radius)
                 {
-                    searchRooms.Push(room);
+                    searchRooms.Push(new(room, searchPointDensity));
                 }
             }
 
-            
+            // Check for valid rooms
+            if (searchRooms.TryPop(out SearchRoom searchRoom))
+            {
+                currentSearchRoom = searchRoom;
+            }
+            else
+            {
+                OnFinish();
+                return;
+            }
 
-            OnFinish();
+            if (currentSearchRoom.TryFindNextPath()
+
+            currentPathIndex = 0;
+
+            GetNextRoom();
+        }
+
+        public void Run()
+        {
+            // Check if reached next search point
+            if (SquareDistance(path[currentPathIndex].position, Vertex.VectorToVertex(aiController.transform.position)) < 0.01f)
+            {
+                FindNextPath();
+
+                if (path == null)
+                {
+                    GetNextRoom();
+
+                    if (currentRoom == null)
+                    {
+                        OnFinish();
+                        return;
+                    }
+                    else
+                    {
+                        FindNextPath();
+                    }
+                }
+            }
+
+            // Check if reached next pathfinding node
+            if (SquareDistance(path[currentPathIndex].position, Vertex.VectorToVertex(movementController.transform.position)) < 0.01f)
+            {
+                currentPathIndex++;
+
+                if (currentPathIndex >= path.Count)
+                {
+
+                }
+            }
         }
     }
 
-    public class ARangedAttack : Action
+    public class RangedAttack : IAction
     {
-        public ARangedAttack()
+        public int Cost { get; private set; }
+
+        public WorldState Preconditions { get; private set; }
+        public WorldState Postconditions { get; private set; }
+        public System.Action OnFinish { get; private set; }
+
+        public RangedAttack(System.Action onFinish)
         {
+            Preconditions = new(new());
+            Postconditions = new(new());
+
             Preconditions.SetCondition(Conditions.CanSeePlayer, true);
             Preconditions.SetCondition(Conditions.HasRanged, true);
             Preconditions.SetCondition(Conditions.HasAmmo, true);
-            
+
             Postconditions.SetCondition(Conditions.PlayerDead, true);
+
+            OnFinish = onFinish;
         }
 
-        public override void Initialize()
-        {
-            throw new System.NotImplementedException();
-        }
+        public void Initialize() { }
 
-        public override void Run(ActionInput input, System.Action OnFinish)
+        public void Run()
         {
             OnFinish();
         }
     }
 
-    public class AMeleeAttack : Action
+    public class MeleeAttack : IAction
     {
-        public AMeleeAttack()
+        public int Cost { get; private set; }
+
+        public WorldState Preconditions { get; private set; }
+        public WorldState Postconditions { get; private set; }
+        public System.Action OnFinish { get; private set; }
+
+        public MeleeAttack(System.Action onFinish)
         {
+            Preconditions = new(new());
+            Postconditions = new(new());
+
             Cost = 2;
             Preconditions.SetCondition(Conditions.CanSeePlayer, true);
             Preconditions.SetCondition(Conditions.NearPlayer, true);
             Preconditions.SetCondition(Conditions.HasMelee, true);
 
             Postconditions.SetCondition(Conditions.PlayerDead, true);
+
+            OnFinish = onFinish;
         }
 
-        public override void Initialize()
-        {
-            throw new System.NotImplementedException();
-        }
+        public void Initialize() { }
 
-        public override void Run(ActionInput input, System.Action OnFinish)
+        public void Run()
         {
             OnFinish();
         }
     }
 
-    public class AChase : Action
+    public class Chase : IAction
     {
-        public AChase()
+        public int Cost { get; private set; }
+
+        public WorldState Preconditions { get; private set; }
+        public WorldState Postconditions { get; private set; }
+        public System.Action OnFinish { get; private set; }
+
+        public Chase(System.Action onFinish)
         {
+            Preconditions = new(new());
+            Postconditions = new(new());
+
             Cost = 2;
             Preconditions.SetCondition(Conditions.CanSeePlayer, true);
             Preconditions.SetCondition(Conditions.NearPlayer, false);
-            
+
             Postconditions.SetCondition(Conditions.NearPlayer, true);
+
+            OnFinish = onFinish;
         }
 
-        public override void Initialize()
-        {
-            throw new System.NotImplementedException();
-        }
+        public void Initialize() { }
 
-        public override void Run(ActionInput input, System.Action OnFinish)
+        public void Run()
         {
             OnFinish();
         }
     }
 
-    public class ARecover : Action
+    public class Recover : IAction
     {
-        public ARecover()
+        public int Cost { get; private set; }
+
+        public WorldState Preconditions { get; private set; }
+        public WorldState Postconditions { get; private set; }
+        public System.Action OnFinish { get; private set; }
+
+        public Recover(System.Action onFinish)
         {
+            Preconditions = new(new());
+            Postconditions = new(new());
+
             Cost = 2;
             Preconditions.SetCondition(Conditions.LowHealth, true);
             Preconditions.SetCondition(Conditions.NearHealth, true);
-            
+
             Postconditions.SetCondition(Conditions.LowHealth, false);
+
+            OnFinish = onFinish;
         }
 
-        public override void Initialize()
-        {
-            throw new System.NotImplementedException();
-        }
+        public void Initialize() { }
 
-        public override void Run(ActionInput input, System.Action OnFinish)
+        public void Run()
         {
             OnFinish();
         }

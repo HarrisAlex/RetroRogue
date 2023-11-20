@@ -333,6 +333,8 @@ namespace Assets.Scripts.Generation
 
             public Vertex Center => new(xPosition + (width / 2), yPosition + (height / 2));
 
+            public float Area => width * height;
+
             public Room() { }
 
             public Room(int xPosition, int yPosition, int width, int height)

@@ -5,12 +5,9 @@ using UnityEngine;
 
 public interface ISmartObject
 {
-    public List<Type> GetAllowedTypes();
-    public WorldState GetPreconditions();
-    public WorldState GetPostconditions();
-    public Transform GetTransform();
-    public TerminationType GetAnimationTerminationType();
-    public string GetAnimationName();
-    public float GetAnimationDuration();
-    public ConditionValuePair GetAnimationCondition();
+    public List<Type> AllowedTypes { get; }
+    public WorldState Preconditions { get; }
+    public WorldState Postconditions { get; }
+    public Transform Transform { get; }
+    public AnimationData AnimationData { get; }
 }
